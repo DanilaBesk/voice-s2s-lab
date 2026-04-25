@@ -1,0 +1,292 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172026;
+  background: #f4f6f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  align-items: center;
+  background: #21302b;
+  border: 1px solid #21302b;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.call-button {
+  font-size: 18px;
+  font-weight: 700;
+  min-height: 64px;
+  width: 100%;
+}
+
+.call-button-live {
+  background: #8f1d16;
+  border-color: #8f1d16;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #c7d0cc;
+  border-radius: 6px;
+  color: #172026;
+  width: 100%;
+}
+
+input,
+select {
+  min-height: 38px;
+  padding: 6px 8px;
+}
+
+textarea {
+  min-height: 150px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.lab-shell {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.topbar {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.topbar p,
+.session-strip span {
+  color: #5e6a66;
+  font-size: 13px;
+}
+
+.workspace {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dbe2df;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.controls-panel {
+  align-self: start;
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field-note {
+  color: #5e6a66;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+label {
+  color: #2d3b36;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.model-card {
+  background: #f8faf9;
+  border: 1px solid #dbe2df;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.model-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.status-group {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.status-pill {
+  border-radius: 999px;
+  border: 1px solid #97a39e;
+  color: #2f4039;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.status-ready {
+  background: #dff3e8;
+  border-color: #8ac8a4;
+}
+
+.status-not-installed,
+.status-not-checked {
+  background: #fff5cf;
+  border-color: #dec36a;
+}
+
+.status-error,
+.status-loading {
+  background: #ffe0dc;
+  border-color: #dc8d82;
+}
+
+.status-detail {
+  color: #7a4e00;
+  font-size: 13px;
+}
+
+.secondary-button {
+  background: #eef3f1;
+  border-color: #c7d0cc;
+  color: #24332e;
+}
+
+.mic-meter {
+  background: #e2e9e6;
+  border: 1px solid #c7d0cc;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.mic-meter span {
+  background: #237a58;
+  display: block;
+  height: 100%;
+  transition: width 80ms linear;
+}
+
+.activity-line {
+  align-items: center;
+  color: #51605b;
+  display: flex;
+  font-size: 13px;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 20px;
+}
+
+.activity-line strong {
+  color: #172026;
+}
+
+.activity-line span {
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error-box {
+  background: #fff0ef;
+  border: 1px solid #dc8d82;
+  border-radius: 6px;
+  color: #7b2017;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
+.runtime-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.session-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.session-strip > div {
+  background: #f8faf9;
+  border: 1px solid #dbe2df;
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.audio-player {
+  width: 100%;
+}
+
+.response-box {
+  background: #111816;
+  border-radius: 6px;
+  color: #edf4f1;
+  min-height: 180px;
+  padding: 12px;
+}
+
+@media (max-width: 900px) {
+  .workspace,
+  .session-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    align-items: start;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,19 @@
+model:
+  id: mock-audio
+  display_name: Mock Audio Loopback
+  hf_repo:
+  type: mock
+  adapter: mock_audio
+  runtime: in_process
+  mode: turn_based
+  language_notes: "Language independent; returns a synthetic tone and test transcript."
+  hardware_notes: "Runs on CPU. No GPU, model download, or Hugging Face token required."
+  install_notes: "Included with the backend."
+  supports_prompt: true
+  supports_streaming: false
+  input_sample_rate: 16000
+  output_sample_rate: 24000
+  enabled: false
+  default: false
+  config:
+    response_delay_ms: 0

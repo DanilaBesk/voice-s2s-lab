@@ -1,0 +1,24 @@
+model:
+  id: qwen2-5-omni-3b
+  display_name: Qwen2.5 Omni 3B
+  hf_repo: Qwen/Qwen2.5-Omni-3B
+  type: audio_to_audio
+  adapter: qwen_omni_audio
+  runtime: in_process
+  mode: turn_based
+  language_notes: "Russian is the target test language for this lab. Qwen2.5-Omni is multimodal and can generate speech, but the Hugging Face model card does not explicitly guarantee Russian speech quality."
+  hardware_notes: "Host macOS with Apple Silicon MPS is preferred. This turn-based adapter keeps the full speech generator loaded in memory; CPU fallback is possible but slower."
+  install_notes: "Install optional backend extras with `uv sync --extra qwen --extra dev`; set VOICE_S2S_ENABLE_REAL_MODEL=true before warmup."
+  supports_prompt: true
+  supports_streaming: true
+  input_sample_rate: 16000
+  output_sample_rate: 24000
+  enabled: true
+  default: true
+  config:
+    device: auto
+    dtype: auto
+    speaker: Chelsie
+    thinker_max_new_tokens: 32
+    talker_max_new_tokens: 64
+    talker_temperature: 0.6
