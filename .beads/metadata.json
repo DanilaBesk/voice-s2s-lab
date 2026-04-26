@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "voice_s2s_lab",
+  "project_id": "d4df9564-6f24-46b3-b0fd-52dfb30a1a1d"
+}
