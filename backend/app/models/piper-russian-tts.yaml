@@ -1,0 +1,91 @@
+models:
+  - id: piper-ru-ru-denis-medium
+    display_name: Piper Russian Denis Medium
+    hf_repo:
+    type: text_to_audio
+    capabilities:
+      - text_to_audio
+      - tts
+    voices:
+      - id: ru_RU-denis-medium
+        display_name: Denis
+        language: ru-RU
+        gender: male
+        sample_rate: 22050
+        notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config."
+    adapter: piper_tts
+    runtime: subprocess
+    mode: turn_based
+    language_notes: "Russian text-to-speech voice for local Piper runtime."
+    hardware_notes: "Runs on CPU through Piper. No GPU required."
+    install_notes: "Install Piper separately and place ru_RU-denis-medium.onnx plus ru_RU-denis-medium.onnx.json under data/models/piper. The backend never downloads these files."
+    supports_prompt: true
+    supports_streaming: false
+    input_sample_rate: 16000
+    output_sample_rate: 22050
+    enabled: true
+    default: false
+    config:
+      piper_executable: piper
+      model_path: data/models/piper/ru_RU-denis-medium.onnx
+      config_path: data/models/piper/ru_RU-denis-medium.onnx.json
+      timeout_s: 120
+
+  - id: piper-ru-ru-dmitri-medium
+    display_name: Piper Russian Dmitri Medium
+    hf_repo:
+    type: text_to_audio
+    capabilities:
+      - text_to_audio
+      - tts
+    voices:
+      - id: ru_RU-dmitri-medium
+        display_name: Dmitri
+        language: ru-RU
+        gender: male
+        sample_rate: 22050
+        notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config."
+    adapter: piper_tts
+    runtime: subprocess
+    mode: turn_based
+    language_notes: "Russian text-to-speech voice for local Piper runtime."
+    hardware_notes: "Runs on CPU through Piper. No GPU required."
+    install_notes: "Install Piper separately and place ru_RU-dmitri-medium.onnx plus ru_RU-dmitri-medium.onnx.json under data/models/piper. The backend never downloads these files."
+    supports_prompt: true
+    supports_streaming: false
+    input_sample_rate: 16000
+    output_sample_rate: 22050
+    enabled: true
+    default: false
+    config:
+      piper_executable: piper
+      model_path: data/models/piper/ru_RU-dmitri-medium.onnx
+      config_path: data/models/piper/ru_RU-dmitri-medium.onnx.json
+      timeout_s: 120
+
+  - id: synthetic-local-tts
+    display_name: Synthetic Local TTS
+    hf_repo:
+    type: text_to_audio
+    capabilities:
+      - text_to_audio
+      - tts
+    voices:
+      - id: synthetic-local
+        display_name: Synthetic Local
+        language: ru-RU
+        sample_rate: 22050
+        notes: "Deterministic test voice that writes a tone WAV and does not use model weights."
+    adapter: synthetic_tts
+    runtime: in_process
+    mode: turn_based
+    language_notes: "Test-friendly local TTS fixture; text is echoed and audio is a deterministic tone."
+    hardware_notes: "Runs on CPU with only the Python standard library."
+    install_notes: "Included with the backend for automated tests. Not intended as a production voice."
+    supports_prompt: true
+    supports_streaming: false
+    input_sample_rate: 16000
+    output_sample_rate: 22050
+    enabled: false
+    default: false
+    config: {}

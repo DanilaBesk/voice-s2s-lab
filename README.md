@@ -70,6 +70,17 @@ data/models
 
 For the current Qwen path, prefer `HF_HUB_CACHE=../data/models/huggingface` over `HF_HOME` so manual snapshot downloads and runtime warmup use the same cache location.
 
+TTS model weights are also kept outside git. Piper Russian voices are expected at:
+
+```text
+data/models/piper/ru_RU-denis-medium.onnx
+data/models/piper/ru_RU-denis-medium.onnx.json
+data/models/piper/ru_RU-dmitri-medium.onnx
+data/models/piper/ru_RU-dmitri-medium.onnx.json
+```
+
+The backend never downloads these files automatically. See [docs/tts-research-and-evidence.md](docs/tts-research-and-evidence.md) for the researched model shortlist, license risks, install notes, and runtime evidence.
+
 ## Adding A Model
 
 1. Add `backend/app/models/<model-id>.yaml`.
@@ -81,16 +92,28 @@ The frontend reads `/api/models` and should not need model-specific branching.
 ## Current Runtime Surface
 
 - `qwen2-5-omni-3b`: the only enabled real speech-to-speech target.
+- `piper-ru-ru-denis-medium`: enabled local Russian text-to-speech target; requires external Piper runtime plus ONNX/JSON files under `data/models/piper`.
+- `piper-ru-ru-dmitri-medium`: enabled local Russian text-to-speech target; requires external Piper runtime plus ONNX/JSON files under `data/models/piper`.
+- `synthetic-local-tts`: disabled catalog fixture for deterministic backend/frontend tests; it is not a production voice and does not use model weights.
 - `mock-audio`: disabled catalog entry kept only for backend transport unit tests; it is not exposed in the UI.
 
 The editable persona prompt in the UI is for behavior testing. For Qwen audio output, the adapter must keep Qwen's required system prompt fixed and applies the editable persona as a user-instruction prefix.
+
+The active API surface includes explicit model lifecycle endpoints for both S2S and TTS:
+
+- `GET /api/models`
+- `GET /api/runtime`
+- `POST /api/models/{id}/load`
+- `DELETE /api/models/{id}/load`
+- `POST /api/tts`
+- `GET /api/tts/{turn_id}/audio`
 
 ## Verification Commands
 
 ```bash
 cd backend && uv run --extra dev --extra qwen pytest
-cd frontend && npm run test -- --run && npm run build
-cd frontend && E2E_BASE_URL=http://127.0.0.1:5174 npm run test:e2e
+cd frontend && npm run test -- --run src && npm run build
+cd frontend && npm run test:e2e
 cd backend && \
   HF_HUB_CACHE=../data/models/huggingface \
   HF_HUB_DISABLE_XET=1 \

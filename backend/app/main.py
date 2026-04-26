@@ -4,7 +4,7 @@ import json
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,6 +32,13 @@ class CreateSessionRequest(BaseModel):
     model_id: str
     persona_prompt: str = Field(default=DEFAULT_PERSONA_PROMPT)
     mode: str = "turn_based"
+
+
+class TtsRequest(BaseModel):
+    model_id: str
+    text: str
+    voice: str | None = None
+    options: dict[str, Any] = Field(default_factory=dict)
 
 
 class AppState:
@@ -296,10 +303,80 @@ async def submit_turn(
     }
 
 
+@app.post("/api/tts")
+async def generate_tts(request: TtsRequest) -> dict:
+    timer = Timer()
+    entry = _get_model(request.model_id)
+    if not _supports_tts(entry):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "model_not_tts",
+                "message": "Model does not support text-to-speech generation",
+                "detail": {"model_id": entry.id, "capabilities": entry.capabilities},
+            },
+        )
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail={"code": "empty_tts_text", "message": "TTS text is empty"})
+
+    adapter = await _loaded_adapter_for(entry)
+    turn_id = new_id("turn")
+    paths = state.sessions.tts_turn_paths(turn_id)
+    event_log = EventLog(paths["events"])
+    event_log.add("tts.received", "TTS request received", model_id=entry.id, turn_id=turn_id, voice=request.voice)
+    paths["input"].write_text(text, encoding="utf-8")
+    event_log.add("text.saved", "Input text saved", chars=len(text), path=str(paths["input"]))
+
+    options = dict(request.options)
+    options["text"] = text
+    if request.voice is not None:
+        options["voice"] = request.voice
+
+    try:
+        result = await adapter.process_audio_file_or_chunk(
+            AudioTurn(
+                session_id="tts",
+                turn_id=turn_id,
+                input_path=paths["input"],
+                output_path=paths["output"],
+                mime_type="text/plain",
+                persona_prompt=text,
+                options=options,
+            )
+        )
+    except AdapterError as exc:
+        event_log.add("adapter.failed", exc.message, code=exc.code, detail=exc.detail)
+        raise HTTPException(status_code=502, detail=exc.as_dict()) from exc
+
+    for adapter_event in result.events:
+        event_log.add(adapter_event["type"], adapter_event["message"], **adapter_event.get("data", {}))
+    total_ms = timer.elapsed_ms()
+    event_log.add("tts.completed", "TTS generation completed", total_ms=total_ms)
+    return {
+        "turn_id": turn_id,
+        "status": "completed",
+        "audio_url": f"/api/tts/{turn_id}/audio" if result.output_path else None,
+        "text": result.text,
+        "latency_ms": total_ms,
+        "events": event_log.as_list(),
+        "metrics": {**result.metrics, "text_chars": len(text), "total_ms": total_ms},
+        "warnings": result.warnings,
+    }
+
+
 @app.get("/api/sessions/{session_id}/turns/{turn_id}/audio")
 async def get_turn_audio(session_id: str, turn_id: str):
     _get_session(session_id)
     output_path = state.sessions.session_dir(session_id) / "output" / f"{turn_id}.wav"
+    if not output_path.exists():
+        raise HTTPException(status_code=404, detail={"code": "audio_not_found", "message": "Output audio not found"})
+    return FileResponse(output_path, media_type="audio/wav", filename=f"{turn_id}.wav")
+
+
+@app.get("/api/tts/{turn_id}/audio")
+async def get_tts_audio(turn_id: str):
+    output_path = state.sessions.tts_output_path(turn_id)
     if not output_path.exists():
         raise HTTPException(status_code=404, detail={"code": "audio_not_found", "message": "Output audio not found"})
     return FileResponse(output_path, media_type="audio/wav", filename=f"{turn_id}.wav")
@@ -318,6 +395,10 @@ async def _loaded_adapter_for(entry: ModelCatalogEntry):
     except AdapterError as exc:
         status_code = 409 if exc.code == "model_not_loaded" else 502
         raise HTTPException(status_code=status_code, detail=exc.as_dict()) from exc
+
+
+def _supports_tts(entry: ModelCatalogEntry) -> bool:
+    return entry.type == "text_to_audio" or "tts" in entry.capabilities or "text_to_audio" in entry.capabilities
 
 
 def _get_session(session_id: str):

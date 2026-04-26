@@ -58,6 +58,12 @@ class SessionStore:
             "events": base / "events.jsonl",
         }
 
+    def tts_turn_paths(self, turn_id: str) -> dict[str, Path]:
+        return self.turn_paths("tts", turn_id, ".txt")
+
+    def tts_output_path(self, turn_id: str) -> Path:
+        return self.session_dir("tts") / "output" / f"{turn_id}.wav"
+
     def as_dict(self, session: Session) -> dict[str, Any]:
         return {
             "session_id": session.id,

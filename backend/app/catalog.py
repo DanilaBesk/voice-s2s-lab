@@ -4,11 +4,21 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
-ModelType = Literal["audio_to_audio", "pipeline", "mock"]
+ModelType = Literal["audio_to_audio", "text_to_audio", "pipeline", "mock"]
+CapabilityType = Literal["audio_to_audio", "text_to_audio", "tts"]
 RuntimeType = Literal["in_process", "subprocess", "docker"]
+
+
+class VoiceMetadata(BaseModel):
+    id: str
+    display_name: str
+    language: str
+    gender: str | None = None
+    sample_rate: int | None = None
+    notes: str | None = None
 
 
 class ModelCatalogEntry(BaseModel):
@@ -16,6 +26,8 @@ class ModelCatalogEntry(BaseModel):
     display_name: str
     hf_repo: str | None = None
     type: ModelType
+    capabilities: list[CapabilityType] = Field(default_factory=list)
+    voices: list[VoiceMetadata] = Field(default_factory=list)
     adapter: str
     runtime: RuntimeType
     mode: Literal["turn_based", "streaming"] = "turn_based"
@@ -29,6 +41,16 @@ class ModelCatalogEntry(BaseModel):
     enabled: bool = True
     default: bool = False
     config: dict = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def default_capabilities(self) -> "ModelCatalogEntry":
+        if self.capabilities:
+            return self
+        if self.type == "text_to_audio":
+            self.capabilities = ["text_to_audio", "tts"]
+        else:
+            self.capabilities = ["audio_to_audio"]
+        return self
 
     def public_dict(self, status: str = "not_checked", status_detail: str | None = None) -> dict:
         data = self.model_dump(exclude={"config"})

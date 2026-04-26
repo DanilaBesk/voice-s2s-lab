@@ -73,6 +73,10 @@ textarea {
   resize: vertical;
 }
 
+.tts-text {
+  min-height: 180px;
+}
+
 .lab-shell {
   min-height: 100vh;
   padding: 20px;
@@ -127,6 +131,25 @@ h2 {
   gap: 14px;
 }
 
+.mode-switch,
+.model-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mode-switch button {
+  background: #eef3f1;
+  border-color: #c7d0cc;
+  color: #24332e;
+}
+
+.mode-switch .mode-active {
+  background: #21302b;
+  border-color: #21302b;
+  color: #ffffff;
+}
+
 .field {
   display: grid;
   gap: 6px;
@@ -151,6 +174,23 @@ label {
   display: grid;
   gap: 8px;
   padding: 10px;
+}
+
+.model-summary-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.model-summary-grid > div {
+  background: #f8faf9;
+  border: 1px solid #dbe2df;
+  border-radius: 6px;
+  color: #2d3b36;
+  font-size: 13px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  padding: 9px 10px;
 }
 
 .model-title {
@@ -200,6 +240,10 @@ label {
   background: #eef3f1;
   border-color: #c7d0cc;
   color: #24332e;
+}
+
+.compact-button {
+  justify-self: start;
 }
 
 .mic-meter {
@@ -281,7 +325,9 @@ label {
 
 @media (max-width: 900px) {
   .workspace,
-  .session-strip {
+  .session-strip,
+  .model-actions,
+  .model-summary-grid {
     grid-template-columns: 1fr;
   }
 

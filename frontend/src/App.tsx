@@ -1,6 +1,21 @@
-import { Phone, Square } from "lucide-react";
+import { Phone, Play, Power, Square, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { API_BASE_URL, createSession, fetchModels, interruptSession, ModelEntry, SessionResponse, submitTurn, TurnResponse } from "./api";
+import {
+  API_BASE_URL,
+  createSession,
+  fetchModels,
+  fetchRuntime,
+  generateTts,
+  interruptSession,
+  loadModel,
+  ModelEntry,
+  RuntimeResponse,
+  SessionResponse,
+  submitTurn,
+  TtsResponse,
+  TurnResponse,
+  unloadModel,
+} from "./api";
 import { encodePcmToWav, resampleLinear } from "./audioUtils";
 import { UtteranceVad } from "./audioVad";
 import { StatusPill } from "./components/StatusPill";
@@ -15,18 +30,29 @@ const DEFAULT_TURN_OPTIONS = {
 
 const TALKER_TOKENS_PER_SECOND = 50;
 
+type AppMode = "s2s" | "tts";
 type CallStatus = "idle" | "connecting" | "listening" | "capturing" | "processing" | "playing" | "ending" | "ended";
+type TtsStatus = "idle" | "generating" | "completed";
+
+const EMPTY_RUNTIME: RuntimeResponse = { model_id: null, status: "not_loaded", detail: null };
 
 export function App() {
+  const [appMode, setAppMode] = useState<AppMode>("s2s");
   const [models, setModels] = useState<ModelEntry[]>([]);
+  const [runtime, setRuntime] = useState<RuntimeResponse>(EMPTY_RUNTIME);
   const [selectedModelId, setSelectedModelId] = useState("");
+  const [modelBusy, setModelBusy] = useState(false);
   const [persona, setPersona] = useState(DEFAULT_PERSONA);
   const [turnOptions, setTurnOptions] = useState(DEFAULT_TURN_OPTIONS);
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [lastTurn, setLastTurn] = useState<TurnResponse | null>(null);
+  const [ttsTurn, setTtsTurn] = useState<TtsResponse | null>(null);
+  const [ttsText, setTtsText] = useState("");
+  const [ttsVoice, setTtsVoice] = useState("");
+  const [ttsStatus, setTtsStatus] = useState<TtsStatus>("idle");
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [inputLevel, setInputLevel] = useState(0);
-  const [activity, setActivity] = useState("Нажмите кнопку и говорите.");
+  const [activity, setActivity] = useState("Выберите режим и модель.");
   const [microphoneName, setMicrophoneName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -40,11 +66,17 @@ export function App() {
   const turnInFlightRef = useRef(false);
   const sessionRef = useRef<SessionResponse | null>(null);
   const selectedModelRef = useRef<ModelEntry | undefined>(undefined);
+  const runtimeRef = useRef<RuntimeResponse>(EMPTY_RUNTIME);
   const vadRef = useRef(new UtteranceVad());
 
+  const modeModels = useMemo(() => models.filter((model) => (appMode === "tts" ? supportsTts(model) : supportsS2s(model))), [appMode, models]);
   const selectedModel = useMemo(() => models.find((model) => model.id === selectedModelId), [models, selectedModelId]);
+  const loadedModel = useMemo(() => models.find((model) => model.id === runtime.model_id), [models, runtime.model_id]);
   const callActive = callStatus === "connecting" || callStatus === "listening" || callStatus === "capturing" || callStatus === "processing" || callStatus === "playing";
+  const selectedModelReady = Boolean(selectedModel && runtime.model_id === selectedModel.id && runtime.status === "ready");
   const estimatedVoiceSeconds = turnOptions.talker_max_new_tokens / TALKER_TOKENS_PER_SECOND;
+  const ttsReady = appMode === "tts" && Boolean(selectedModel && supportsTts(selectedModel) && selectedModelReady);
+  const displayedText = appMode === "tts" ? ttsTurn?.text : lastTurn?.text;
 
   useEffect(() => {
     sessionRef.current = session;
@@ -55,31 +87,44 @@ export function App() {
   }, [selectedModel]);
 
   useEffect(() => {
+    runtimeRef.current = runtime;
+  }, [runtime]);
+
+  useEffect(() => {
+    setSelectedModelId((current) => {
+      if (modeModels.some((model) => model.id === current)) return current;
+      const nextDefault = modeModels.find((model) => model.default) ?? modeModels[0];
+      return nextDefault?.id ?? "";
+    });
+  }, [modeModels]);
+
+  useEffect(() => {
+    if (selectedModel?.voices.some((voice) => voice.id === ttsVoice)) return;
+    setTtsVoice(selectedModel?.voices[0]?.id ?? "");
+  }, [selectedModel, ttsVoice]);
+
+  useEffect(() => {
     let cancelled = false;
     let timeoutId: number | undefined;
 
-    function loadModels() {
-      fetchModels()
-        .then((loaded) => {
-          if (cancelled) return;
-          setModels(loaded);
-          const defaultModel =
-            loaded.find((model) => model.default) ??
-            loaded.find((model) => model.type === "audio_to_audio" && model.status === "ready") ??
-            loaded[0];
-          setSelectedModelId((current) => current || defaultModel?.id || "");
-          if (loaded.some((model) => model.status === "loading" || model.status === "not_checked")) {
-            timeoutId = window.setTimeout(loadModels, 3000);
-          }
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          setError(String(err));
-          timeoutId = window.setTimeout(loadModels, 3000);
-        });
+    async function loadSystem() {
+      try {
+        const [loadedModels, nextRuntime] = await Promise.all([fetchModels(), fetchRuntime()]);
+        if (cancelled) return;
+        setModels(loadedModels);
+        setRuntime(nextRuntime);
+        runtimeRef.current = nextRuntime;
+        if (loadedModels.some((model) => model.status === "loading" || model.status === "not_checked") || nextRuntime.status === "loading") {
+          timeoutId = window.setTimeout(loadSystem, 3000);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setError(humanError(err));
+        timeoutId = window.setTimeout(loadSystem, 3000);
+      }
     }
 
-    loadModels();
+    void loadSystem();
     return () => {
       cancelled = true;
       if (timeoutId) window.clearTimeout(timeoutId);
@@ -87,10 +132,90 @@ export function App() {
     };
   }, []);
 
-  async function startCall() {
-    const model = selectedModelRef.current;
-    if (!model || model.status !== "ready") return;
+  async function refreshSystem() {
+    const [loadedModels, nextRuntime] = await Promise.all([fetchModels(), fetchRuntime()]);
+    setModels(loadedModels);
+    setRuntime(nextRuntime);
+    runtimeRef.current = nextRuntime;
+  }
+
+  function switchMode(nextMode: AppMode) {
+    setAppMode(nextMode);
+    const candidates = models.filter((model) => (nextMode === "tts" ? supportsTts(model) : supportsS2s(model)));
+    const nextDefault = candidates.find((model) => model.default) ?? candidates[0];
+    setSelectedModelId(nextDefault?.id ?? "");
     setError(null);
+    setActivity(nextMode === "tts" ? "Введите текст для озвучки." : "Нажмите кнопку и говорите.");
+  }
+
+  async function ensureModelReady(model: ModelEntry): Promise<boolean> {
+    if (runtimeRef.current.model_id === model.id && runtimeRef.current.status === "ready") return true;
+
+    setModelBusy(true);
+    setError(null);
+    setActivity("Запускаю модель.");
+    try {
+      const currentRuntime = runtimeRef.current;
+      if (currentRuntime.model_id && currentRuntime.model_id !== model.id) {
+        const afterUnload = await unloadModel(currentRuntime.model_id);
+        setRuntime(afterUnload);
+        runtimeRef.current = afterUnload;
+      }
+
+      const nextRuntime = await loadModel(model.id);
+      setRuntime(nextRuntime);
+      runtimeRef.current = nextRuntime;
+      if (nextRuntime.status !== "ready") {
+        throw new Error(nextRuntime.detail || `Модель не готова: ${nextRuntime.status}`);
+      }
+      setActivity("Модель готова.");
+      await refreshSystem();
+      return true;
+    } catch (err) {
+      setActivity("Модель не загрузилась.");
+      setError(humanError(err));
+      await refreshSystem().catch(() => undefined);
+      return false;
+    } finally {
+      setModelBusy(false);
+    }
+  }
+
+  async function startSelectedModel() {
+    const model = selectedModelRef.current ?? selectedModel;
+    if (!model) return;
+    await ensureModelReady(model);
+  }
+
+  async function stopLoadedModel() {
+    const modelId = runtimeRef.current.model_id;
+    if (!modelId) return;
+    setModelBusy(true);
+    setError(null);
+    try {
+      if (callActiveRef.current) await endCall();
+      const nextRuntime = await unloadModel(modelId);
+      setRuntime(nextRuntime);
+      runtimeRef.current = nextRuntime;
+      setSession(null);
+      sessionRef.current = null;
+      setActivity("Модель остановлена.");
+      await refreshSystem();
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setModelBusy(false);
+    }
+  }
+
+  async function startCall() {
+    const model = selectedModelRef.current ?? selectedModel;
+    if (!model || !supportsS2s(model)) return;
+    setError(null);
+    if (!(await ensureModelReady(model))) {
+      setCallStatus("idle");
+      return;
+    }
     setActivity("Подключаю микрофон...");
     setCallStatus("connecting");
     try {
@@ -115,7 +240,7 @@ export function App() {
     setCallStatus("ending");
     flushCapture();
     stopAudioGraph();
-    await audioRef.current?.pause();
+    audioRef.current?.pause();
     setInputLevel(0);
     setActivity("Звонок завершен.");
     setCallStatus("ended");
@@ -208,7 +333,9 @@ export function App() {
   }
 
   async function sendAudio(blob: Blob) {
-    const activeSession = sessionRef.current ?? (await createSession(selectedModelId, persona));
+    const model = selectedModelRef.current;
+    if (!model) return;
+    const activeSession = sessionRef.current ?? (await createSession(model.id, persona));
     if (!sessionRef.current) {
       setSession(activeSession);
       sessionRef.current = activeSession;
@@ -274,6 +401,27 @@ export function App() {
     await interruptSession(sessionRef.current.session_id);
   }
 
+  async function generateTtsTurn() {
+    const model = selectedModelRef.current ?? selectedModel;
+    if (!model || !ttsReady || !ttsText.trim()) return;
+    setError(null);
+    setTtsStatus("generating");
+    setActivity("Генерирую TTS.");
+    try {
+      const turn = await generateTts(model.id, ttsText, ttsVoice, {});
+      setTtsTurn(turn);
+      if (turn.audio_url && audioRef.current) {
+        audioRef.current.src = new URL(turn.audio_url, API_BASE_URL).toString();
+      }
+      setActivity("TTS готов.");
+      setTtsStatus("completed");
+    } catch (err) {
+      setActivity("Ошибка TTS.");
+      setError(humanError(err));
+      setTtsStatus("idle");
+    }
+  }
+
   function updateThinkerTokens(value: number) {
     setTurnOptions((current) => ({
       ...current,
@@ -298,16 +446,30 @@ export function App() {
 
       <section className="workspace">
         <aside className="panel controls-panel">
+          <div className="mode-switch" aria-label="Режим">
+            <button className={appMode === "s2s" ? "mode-active" : ""} onClick={() => switchMode("s2s")} type="button" disabled={callActive || modelBusy}>
+              S2S
+            </button>
+            <button className={appMode === "tts" ? "mode-active" : ""} onClick={() => switchMode("tts")} type="button" disabled={callActive || modelBusy}>
+              TTS
+            </button>
+          </div>
+
           <div className="field">
             <label htmlFor="model-select">Модель</label>
-            <select id="model-select" value={selectedModelId} onChange={(event) => setSelectedModelId(event.target.value)} disabled={callActive}>
-              {models.map((model) => (
+            <select id="model-select" value={selectedModelId} onChange={(event) => setSelectedModelId(event.target.value)} disabled={callActive || modelBusy}>
+              {modeModels.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.display_name}
                   {model.status === "ready" ? " (готово)" : ` (${model.status})`}
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="model-summary-grid">
+            <div aria-label="Выбрана модель">Выбрана: {selectedModel?.display_name ?? "-"}</div>
+            <div aria-label="Загруженная модель">Загружена: {runtime.status === "ready" ? loadedModel?.display_name ?? runtime.model_id ?? "-" : "-"}</div>
           </div>
 
           {selectedModel && (
@@ -318,82 +480,129 @@ export function App() {
                   <StatusPill status={selectedModel.status} />
                 </div>
               </div>
-              {selectedModel.status !== "ready" && <p className="status-detail">Модель недоступна.</p>}
+              <p className="status-detail">{selectedModel.status_detail || runtimeDetailForModel(selectedModel, runtime) || modelHint(selectedModel, selectedModelReady)}</p>
             </div>
           )}
 
-          <button className={`call-button ${callActive ? "call-button-live" : ""}`} onClick={toggleCall} disabled={!selectedModel || selectedModel.status !== "ready" || callStatus === "ending"}>
-            {callActive ? <Square size={18} /> : <Phone size={18} />}
-            {callActive ? "Завершить" : "Начать звонок"}
-          </button>
-
-          <div className="mic-meter" aria-label="Уровень микрофона">
-            <span style={{ width: `${Math.round(inputLevel * 100)}%` }} />
-          </div>
-
-          <div className="activity-line">
-            <strong>{activity}</strong>
-            {microphoneName && <span>{microphoneName}</span>}
-          </div>
-
-          {callStatus === "processing" && (
-            <button className="secondary-button" onClick={handleInterrupt} disabled={!session}>
-              <Square size={16} /> Стоп
+          <div className="model-actions">
+            <button className="secondary-button" onClick={startSelectedModel} disabled={!selectedModel || callActive || modelBusy || selectedModelReady}>
+              <Power size={16} /> {selectedModelReady ? "Модель готова" : "Запустить модель"}
             </button>
+            <button className="secondary-button" onClick={stopLoadedModel} disabled={!runtime.model_id || modelBusy}>
+              <Square size={16} /> Остановить модель
+            </button>
+          </div>
+
+          {appMode === "s2s" ? (
+            <>
+              <button className={`call-button ${callActive ? "call-button-live" : ""}`} onClick={toggleCall} disabled={!selectedModel || !supportsS2s(selectedModel) || callStatus === "ending" || modelBusy}>
+                {callActive ? <Square size={18} /> : <Phone size={18} />}
+                {callActive ? "Завершить" : "Начать звонок"}
+              </button>
+
+              <div className="mic-meter" aria-label="Уровень микрофона">
+                <span style={{ width: `${Math.round(inputLevel * 100)}%` }} />
+              </div>
+
+              <div className="activity-line">
+                <strong>{activity}</strong>
+                {microphoneName && <span>{microphoneName}</span>}
+              </div>
+
+              {callStatus === "processing" && (
+                <button className="secondary-button" onClick={handleInterrupt} disabled={!session}>
+                  <Square size={16} /> Стоп
+                </button>
+              )}
+
+              <div className="field persona-field">
+                <label htmlFor="persona">Промпт</label>
+                <textarea id="persona" value={persona} onChange={(event) => setPersona(event.target.value)} disabled={callActive} />
+              </div>
+
+              <div className="field">
+                <label htmlFor="thinker-tokens">Thinker max new tokens</label>
+                <input
+                  id="thinker-tokens"
+                  type="number"
+                  min={1}
+                  max={64}
+                  step={1}
+                  value={turnOptions.thinker_max_new_tokens}
+                  onChange={(event) => updateThinkerTokens(event.target.valueAsNumber)}
+                  disabled={callActive}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="talker-tokens">Talker max new tokens</label>
+                <input
+                  id="talker-tokens"
+                  type="number"
+                  min={24}
+                  max={512}
+                  step={8}
+                  value={turnOptions.talker_max_new_tokens}
+                  onChange={(event) => updateTalkerTokens(event.target.valueAsNumber)}
+                  disabled={callActive}
+                />
+                <p className="field-note">
+                  Примерная длина озвучки: {estimatedVoiceSeconds.toFixed(1)} c. На этой модели 48 токенов дают около 1 секунды речи, поэтому слишком низкий лимит режет ответ.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="field">
+                <label htmlFor="tts-text">Текст</label>
+                <textarea id="tts-text" className="tts-text" value={ttsText} onChange={(event) => setTtsText(event.target.value)} placeholder="Введите русский текст для озвучки" />
+              </div>
+
+              {selectedModel && selectedModel.voices.length > 0 && (
+                <div className="field">
+                  <label htmlFor="tts-voice">Голос</label>
+                  <select id="tts-voice" value={ttsVoice} onChange={(event) => setTtsVoice(event.target.value)}>
+                    {selectedModel.voices.map((voice) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button className="call-button" onClick={generateTtsTurn} disabled={!ttsReady || !ttsText.trim() || ttsStatus === "generating"}>
+                <Volume2 size={18} />
+                {ttsStatus === "generating" ? "Генерирую" : "Сгенерировать"}
+              </button>
+
+              <div className="activity-line">
+                <strong>{activity}</strong>
+                <span>{ttsReady ? "ready" : "not ready"}</span>
+              </div>
+            </>
           )}
 
-          <div className="field persona-field">
-            <label htmlFor="persona">Промпт</label>
-            <textarea id="persona" value={persona} onChange={(event) => setPersona(event.target.value)} disabled={callActive} />
-          </div>
-
-          <div className="field">
-            <label htmlFor="thinker-tokens">Thinker max new tokens</label>
-            <input
-              id="thinker-tokens"
-              type="number"
-              min={1}
-              max={64}
-              step={1}
-              value={turnOptions.thinker_max_new_tokens}
-              onChange={(event) => updateThinkerTokens(event.target.valueAsNumber)}
-              disabled={callActive}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="talker-tokens">Talker max new tokens</label>
-            <input
-              id="talker-tokens"
-              type="number"
-              min={24}
-              max={512}
-              step={8}
-              value={turnOptions.talker_max_new_tokens}
-              onChange={(event) => updateTalkerTokens(event.target.valueAsNumber)}
-              disabled={callActive}
-            />
-            <p className="field-note">
-              Примерная длина озвучки: {estimatedVoiceSeconds.toFixed(1)} c. На этой модели 48 токенов дают около 1 секунды речи, поэтому слишком низкий лимит режет ответ.
-            </p>
-          </div>
-
-          {error && <div className="error-box">{error}</div>}
+          {error && (
+            <div className="error-box" role="alert">
+              {error}
+            </div>
+          )}
         </aside>
 
         <section className="panel runtime-panel">
           <div className="session-strip">
             <div>
-              <span>Звонок</span>
-              <strong>{session ? "активен" : "-"}</strong>
+              <span>Режим</span>
+              <strong>{appMode.toUpperCase()}</strong>
             </div>
             <div>
-              <span>Статус</span>
-              <strong>{statusLabel(callStatus)}</strong>
+              <span>Runtime</span>
+              <strong>{runtime.status}</strong>
             </div>
             <div>
               <span>Задержка</span>
-              <strong>{lastTurn ? `${lastTurn.latency_ms} ms` : "-"}</strong>
+              <strong>{(appMode === "tts" ? ttsTurn?.latency_ms : lastTurn?.latency_ms) ? `${appMode === "tts" ? ttsTurn?.latency_ms : lastTurn?.latency_ms} ms` : "-"}</strong>
             </div>
             <div>
               <span>Аудио</span>
@@ -404,28 +613,42 @@ export function App() {
           <audio ref={audioRef} controls className="audio-player" />
 
           <div className="response-section">
-            <h2>Ответ</h2>
-            <div className="response-box">{lastTurn?.text ?? "..."}</div>
+            <h2>{appMode === "tts" ? "TTS" : "Ответ"}</h2>
+            <div className="response-box">{displayedText ?? "..."}</div>
           </div>
+
+          {appMode === "s2s" && (
+            <button className="secondary-button compact-button" onClick={handleInterrupt} disabled={!session || callStatus !== "processing"}>
+              <Play size={16} /> Interrupt
+            </button>
+          )}
         </section>
       </section>
     </main>
   );
 }
 
-function statusLabel(status: CallStatus): string {
-  if (status === "idle") return "ожидание";
-  if (status === "connecting") return "подключение";
-  if (status === "listening") return "слушаю";
-  if (status === "capturing") return "речь";
-  if (status === "processing") return "ответ";
-  if (status === "playing") return "воспроизведение";
-  if (status === "ending") return "завершение";
-  return "завершен";
+function supportsS2s(model: ModelEntry): boolean {
+  return model.type === "audio_to_audio" || model.capabilities.includes("audio_to_audio");
+}
+
+function supportsTts(model: ModelEntry): boolean {
+  return model.type === "text_to_audio" || model.capabilities.includes("tts") || model.capabilities.includes("text_to_audio");
+}
+
+function runtimeDetailForModel(model: ModelEntry, runtime: RuntimeResponse): string | null {
+  if (runtime.model_id !== model.id) return null;
+  return runtime.detail;
+}
+
+function modelHint(model: ModelEntry, ready: boolean): string {
+  if (ready) return "Модель загружена и готова.";
+  if (model.status === "failed" || model.status === "error") return "Модель не загрузилась.";
+  return "Модель не загружена.";
 }
 
 function humanError(err: unknown): string {
-  const message = String(err);
+  const message = err instanceof Error ? err.message : String(err);
   if (message.includes("NotAllowedError")) return "Нет доступа к микрофону.";
   if (message.includes("NotFoundError")) return "Микрофон не найден.";
   if (message.includes("play()")) return "Браузер заблокировал автозвук. Нажмите play.";

@@ -9,4 +9,12 @@ export default defineConfig({
     baseURL,
     headless: true,
   },
+  webServer: process.env.E2E_BASE_URL
+    ? undefined
+    : {
+        command: "npm run dev -- --host 127.0.0.1 --port 5174",
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 60_000,
+      },
 });

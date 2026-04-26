@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.adapters.base import AdapterError
 from app.catalog import ModelCatalog
 from app.main import app, state
 
@@ -148,3 +149,86 @@ def test_adapter_errors_are_structured():
     detail = response.json()["detail"]
     assert detail["code"] == "model_not_loaded"
     assert detail["detail"]["status"] == "failed"
+
+
+def test_tts_generation_returns_audio_url_and_reuses_loaded_runtime():
+    _reset_runtime_state()
+    load_response = client.post("/api/models/synthetic-local-tts/load")
+    assert load_response.status_code == 200
+    assert load_response.json()["status"] == "ready"
+    adapter = state.adapters["synthetic-local-tts"]
+
+    response = client.post(
+        "/api/tts",
+        json={"model_id": "synthetic-local-tts", "text": "Привет", "voice": "synthetic-local", "options": {"speed": 1.0}},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["turn_id"].startswith("turn_")
+    assert payload["status"] == "completed"
+    assert payload["audio_url"] == f"/api/tts/{payload['turn_id']}/audio"
+    assert payload["text"] == "Привет"
+    assert payload["latency_ms"] >= 0
+    assert payload["events"]
+    assert payload["metrics"]["total_ms"] >= 0
+    assert payload["warnings"] == []
+
+    audio_response = client.get(payload["audio_url"])
+    assert audio_response.status_code == 200
+    assert audio_response.content.startswith(b"RIFF")
+
+    second = client.post("/api/tts", json={"model_id": "synthetic-local-tts", "text": "Еще раз"})
+    assert second.status_code == 200
+    assert state.adapters["synthetic-local-tts"] is adapter
+
+
+def test_tts_generation_rejects_unloaded_tts_model_without_lazy_load():
+    _reset_runtime_state()
+    response = client.post("/api/tts", json={"model_id": "synthetic-local-tts", "text": "Привет"})
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "model_not_loaded"
+    assert "synthetic-local-tts" not in state.adapters
+
+
+def test_tts_generation_rejects_unknown_model():
+    _reset_runtime_state()
+    response = client.post("/api/tts", json={"model_id": "missing-model", "text": "Привет"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "unknown_model"
+
+
+def test_tts_generation_rejects_empty_text():
+    _reset_runtime_state()
+    assert client.post("/api/models/synthetic-local-tts/load").status_code == 200
+
+    response = client.post("/api/tts", json={"model_id": "synthetic-local-tts", "text": "   "})
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "empty_tts_text"
+
+
+def test_tts_generation_rejects_non_tts_model():
+    _reset_runtime_state()
+    assert client.post("/api/models/mock-audio/load").status_code == 200
+
+    response = client.post("/api/tts", json={"model_id": "mock-audio", "text": "Привет"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "model_not_tts"
+
+
+def test_tts_generation_reports_failed_runtime(monkeypatch):
+    _reset_runtime_state()
+    assert client.post("/api/models/synthetic-local-tts/load").status_code == 200
+    adapter = state.adapters["synthetic-local-tts"]
+
+    async def fail_generation(turn):
+        raise AdapterError("model_runtime_error", "Synthetic TTS failed", {"phase": "generate"})
+
+    monkeypatch.setattr(adapter, "process_audio_file_or_chunk", fail_generation)
+    response = client.post("/api/tts", json={"model_id": "synthetic-local-tts", "text": "Привет"})
+
+    assert response.status_code == 502
+    assert response.json()["detail"]["code"] == "model_runtime_error"

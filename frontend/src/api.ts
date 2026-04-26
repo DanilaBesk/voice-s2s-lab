@@ -7,7 +7,9 @@ export type ModelEntry = {
   id: string;
   display_name: string;
   hf_repo?: string | null;
-  type: "audio_to_audio" | "pipeline" | "mock";
+  type: "audio_to_audio" | "text_to_audio" | "pipeline" | "mock";
+  capabilities: Array<"audio_to_audio" | "text_to_audio" | "tts">;
+  voices: VoiceMetadata[];
   adapter: string;
   runtime: "in_process" | "subprocess" | "docker";
   mode: "turn_based" | "streaming";
@@ -21,6 +23,21 @@ export type ModelEntry = {
   default?: boolean;
   status: string;
   status_detail?: string | null;
+};
+
+export type VoiceMetadata = {
+  id: string;
+  display_name: string;
+  language: string;
+  gender?: string | null;
+  sample_rate?: number | null;
+  notes?: string | null;
+};
+
+export type RuntimeResponse = {
+  model_id: string | null;
+  status: string;
+  detail: string | null;
 };
 
 export type SessionResponse = {
@@ -44,10 +61,30 @@ export type TurnResponse = {
   warnings: string[];
 };
 
+export type TtsResponse = Omit<TurnResponse, "session_id">;
+
 export async function fetchModels(): Promise<ModelEntry[]> {
   const response = await fetch(`${API_BASE_URL}/api/models`);
-  if (!response.ok) throw new Error(`Failed to load models: ${response.status}`);
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
   return (await response.json()).models;
+}
+
+export async function fetchRuntime(): Promise<RuntimeResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/runtime`);
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
+  return response.json();
+}
+
+export async function loadModel(modelId: string): Promise<RuntimeResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/models/${encodeURIComponent(modelId)}/load`, { method: "POST" });
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
+  return response.json();
+}
+
+export async function unloadModel(modelId: string): Promise<RuntimeResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/models/${encodeURIComponent(modelId)}/load`, { method: "DELETE" });
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
+  return response.json();
 }
 
 export async function createSession(modelId: string, personaPrompt: string): Promise<SessionResponse> {
@@ -56,7 +93,7 @@ export async function createSession(modelId: string, personaPrompt: string): Pro
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model_id: modelId, persona_prompt: personaPrompt, mode: "turn_based" }),
   });
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
   return response.json();
 }
 
@@ -69,10 +106,40 @@ export async function submitTurn(sessionId: string, audioBlob: Blob, options: Re
     method: "POST",
     body: form,
   });
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
+  return response.json();
+}
+
+export async function generateTts(modelId: string, text: string, voice?: string, options: Record<string, unknown> = {}): Promise<TtsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model_id: modelId, text, voice: voice || undefined, options }),
+  });
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
   return response.json();
 }
 
 export async function interruptSession(sessionId: string): Promise<void> {
   await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/interrupt`, { method: "POST" });
+}
+
+async function responseErrorMessage(response: Response): Promise<string> {
+  const contentType = response.headers.get("Content-Type") ?? "";
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = await response.json();
+      const detail = payload?.detail;
+      if (typeof detail === "string") return detail;
+      if (detail?.message) return String(detail.message);
+      if (detail?.detail) return typeof detail.detail === "string" ? detail.detail : JSON.stringify(detail.detail);
+      if (detail?.code) return String(detail.code);
+      if (payload?.message) return String(payload.message);
+      return JSON.stringify(payload);
+    } catch {
+      return `${response.status} ${response.statusText}`.trim();
+    }
+  }
+  const text = await response.text();
+  return text || `${response.status} ${response.statusText}`.trim();
 }
