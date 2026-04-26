@@ -21,6 +21,10 @@ class MockAudioAdapter:
     async def warmup(self) -> AdapterHealth:
         return AdapterHealth(status="ready", detail="Mock adapter warmed")
 
+    async def unload(self) -> None:
+        self.config = None
+        self.sessions.clear()
+
     async def start_session(self, session_config: SessionConfig) -> None:
         self.sessions.add(session_config.session_id)
 

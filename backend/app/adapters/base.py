@@ -63,6 +63,9 @@ class AudioAdapter(Protocol):
     async def warmup(self) -> AdapterHealth:
         ...
 
+    async def unload(self) -> None:
+        ...
+
     async def start_session(self, session_config: SessionConfig) -> None:
         ...
 

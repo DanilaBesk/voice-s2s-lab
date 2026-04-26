@@ -59,6 +59,26 @@ class QwenOmniAudioAdapter:
             return self.last_health
         return await asyncio.to_thread(self._warmup_sync)
 
+    async def unload(self) -> None:
+        await asyncio.to_thread(self._unload_sync)
+
+    def _unload_sync(self) -> None:
+        with self._warmup_lock:
+            self.sessions.clear()
+            self.processor = None
+            self.model = None
+            self.soundfile = None
+            self.process_mm_info = None
+            torch_module = self.torch
+            self.torch = None
+            self.dtype = None
+            self.device = "cpu"
+            self.last_health = AdapterHealth(status="not_loaded", detail="Qwen Omni runtime is not loaded")
+            if torch_module is not None and hasattr(torch_module, "cuda") and torch_module.cuda.is_available():
+                torch_module.cuda.empty_cache()
+            if torch_module is not None and hasattr(torch_module, "mps") and hasattr(torch_module.mps, "empty_cache"):
+                torch_module.mps.empty_cache()
+
     def _warmup_sync(self) -> AdapterHealth:
         assert self.config is not None
         with self._warmup_lock:
@@ -108,9 +128,11 @@ class QwenOmniAudioAdapter:
 
     async def process_audio_file_or_chunk(self, turn: AudioTurn) -> AdapterResult:
         if self.last_health.status != "ready":
-            health = await self.warmup()
-            if health.status != "ready":
-                raise AdapterError("model_not_ready", "Qwen Omni adapter is not ready", {"status": health.status, "detail": health.detail})
+            raise AdapterError(
+                "model_not_ready",
+                "Qwen Omni adapter is not ready",
+                {"status": self.last_health.status, "detail": self.last_health.detail},
+            )
         return await asyncio.to_thread(self._generate_sync, turn)
 
     def _generate_sync(self, turn: AudioTurn) -> AdapterResult:

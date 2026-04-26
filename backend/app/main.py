@@ -42,47 +42,106 @@ class AppState:
         self.adapters = {}
         self.adapter_tasks: dict[str, asyncio.Task] = {}
         self.adapter_errors: dict[str, str] = {}
+        self.model_statuses: dict[str, str] = {}
+        self.model_status_details: dict[str, str | None] = {}
+        self.loaded_model_id: str | None = None
+        self.runtime_model_id: str | None = None
+        self._runtime_lock = asyncio.Lock()
 
     async def adapter_for(self, entry: ModelCatalogEntry):
-        if entry.adapter not in ADAPTER_REGISTRY:
-            raise AdapterError("adapter_not_registered", f"Adapter is not registered: {entry.adapter}")
-        if entry.id not in self.adapters:
-            await self._ensure_adapter_loaded(entry)
-        return self.adapters[entry.id]
-
-    def schedule_warmup(self, entry: ModelCatalogEntry) -> None:
-        if entry.id in self.adapters:
-            return
-        task = self.adapter_tasks.get(entry.id)
-        if task and not task.done():
-            return
-        self.adapter_tasks[entry.id] = self._spawn_adapter_task(entry)
-
-    async def _ensure_adapter_loaded(self, entry: ModelCatalogEntry) -> None:
-        if entry.id in self.adapters:
-            return
-        task = self.adapter_tasks.get(entry.id)
-        if task is None or task.done():
-            task = self._spawn_adapter_task(entry)
-            self.adapter_tasks[entry.id] = task
-        await task
-
-    def _spawn_adapter_task(self, entry: ModelCatalogEntry) -> asyncio.Task:
-        task = asyncio.create_task(self._load_adapter(entry))
-        task.add_done_callback(lambda done: done.exception())
-        return task
-
-    async def _load_adapter(self, entry: ModelCatalogEntry) -> None:
+        if self.loaded_model_id != entry.id or self.model_status(entry.id) != "ready":
+            raise AdapterError(
+                "model_not_loaded",
+                "Model is not loaded. Use POST /api/models/{id}/load before starting sessions.",
+                {"model_id": entry.id, "status": self.model_status(entry.id)},
+            )
         try:
-            adapter = self.adapters.get(entry.id)
-            if adapter is None:
-                adapter = ADAPTER_REGISTRY[entry.adapter]()
-            await adapter.prepare(entry)
-            self.adapters[entry.id] = adapter
+            return self.adapters[entry.id]
+        except KeyError as exc:
+            raise AdapterError(
+                "model_not_loaded",
+                "Model is not loaded. Use POST /api/models/{id}/load before starting sessions.",
+                {"model_id": entry.id, "status": "not_loaded"},
+            ) from exc
+
+    async def load_model(self, entry: ModelCatalogEntry) -> dict:
+        async with self._runtime_lock:
+            if self.loaded_model_id == entry.id and self.model_status(entry.id) == "ready":
+                return self.runtime_payload(entry.id)
+            for model_id in list(self.adapters):
+                if model_id != entry.id:
+                    await self._unload_model_id(model_id)
+            self.runtime_model_id = entry.id
+            self.model_statuses[entry.id] = "loading"
+            self.model_status_details[entry.id] = None
             self.adapter_errors.pop(entry.id, None)
-        except Exception as exc:
-            self.adapter_errors[entry.id] = str(exc)
-            raise
+            try:
+                adapter = self.adapters.get(entry.id)
+                if adapter is None:
+                    if entry.adapter not in ADAPTER_REGISTRY:
+                        raise AdapterError("adapter_not_registered", f"Adapter is not registered: {entry.adapter}")
+                    adapter = ADAPTER_REGISTRY[entry.adapter]()
+                health_status = await adapter.prepare(entry)
+                if health_status.status == "ready":
+                    self.adapters[entry.id] = adapter
+                    self.loaded_model_id = entry.id
+                    self.model_statuses[entry.id] = "ready"
+                    self.model_status_details[entry.id] = health_status.detail
+                    return self.runtime_payload(entry.id)
+                await adapter.unload()
+                self.adapters.pop(entry.id, None)
+                self.loaded_model_id = None
+                self.model_statuses[entry.id] = "failed"
+                self.model_status_details[entry.id] = health_status.detail or health_status.status
+                self.adapter_errors[entry.id] = self.model_status_details[entry.id] or "Model load failed"
+                return self.runtime_payload(entry.id)
+            except Exception as exc:
+                if "adapter" in locals():
+                    try:
+                        await adapter.unload()
+                    except Exception:
+                        pass
+                self.adapters.pop(entry.id, None)
+                self.loaded_model_id = None
+                self.model_statuses[entry.id] = "failed"
+                self.model_status_details[entry.id] = str(exc)
+                self.adapter_errors[entry.id] = str(exc)
+                return self.runtime_payload(entry.id)
+
+    async def unload_model(self, entry: ModelCatalogEntry) -> dict:
+        async with self._runtime_lock:
+            await self._unload_model_id(entry.id)
+            return self.runtime_payload(entry.id)
+
+    async def _unload_model_id(self, model_id: str) -> None:
+        adapter = self.adapters.pop(model_id, None)
+        self.adapter_tasks.pop(model_id, None)
+        self.model_statuses[model_id] = "unloading"
+        if adapter is not None:
+            await adapter.unload()
+        if self.loaded_model_id == model_id:
+            self.loaded_model_id = None
+        if self.runtime_model_id == model_id:
+            self.runtime_model_id = None
+        self.adapter_errors.pop(model_id, None)
+        self.model_statuses[model_id] = "not_loaded"
+        self.model_status_details[model_id] = None
+
+    def model_status(self, model_id: str) -> str:
+        return self.model_statuses.get(model_id, "not_loaded")
+
+    def model_status_detail(self, model_id: str) -> str | None:
+        return self.model_status_details.get(model_id) or self.adapter_errors.get(model_id)
+
+    def runtime_payload(self, model_id: str | None = None) -> dict:
+        runtime_model_id = model_id or self.runtime_model_id or self.loaded_model_id
+        if runtime_model_id is None:
+            return {"model_id": None, "status": "not_loaded", "detail": None}
+        return {
+            "model_id": runtime_model_id,
+            "status": self.model_status(runtime_model_id),
+            "detail": self.model_status_detail(runtime_model_id),
+        }
 
 
 state = AppState()
@@ -90,9 +149,6 @@ state = AppState()
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    for entry in state.catalog.list():
-        if entry.default:
-            state.schedule_warmup(entry)
     yield
 
 
@@ -116,28 +172,8 @@ async def health() -> dict:
 async def list_models() -> dict:
     models = []
     for entry in state.catalog.list():
-        try:
-            adapter = state.adapters.get(entry.id)
-            if adapter is None:
-                if entry.default:
-                    state.schedule_warmup(entry)
-                task = state.adapter_tasks.get(entry.id)
-                if task and not task.done():
-                    status = "loading"
-                    detail = "Model warmup is running in the background."
-                elif entry.id in state.adapter_errors:
-                    status = "error"
-                    detail = state.adapter_errors[entry.id]
-                else:
-                    status = "not_checked"
-                    detail = None
-            else:
-                health_status = getattr(adapter, "last_health", None)
-                status = health_status.status if health_status else "not_checked"
-                detail = health_status.detail if health_status else None
-        except AdapterError as exc:
-            status = "error"
-            detail = exc.message
+        status = state.model_status(entry.id)
+        detail = state.model_status_detail(entry.id)
         models.append(entry.public_dict(status=status, status_detail=detail))
     models.sort(
         key=lambda model: (
@@ -149,10 +185,27 @@ async def list_models() -> dict:
     return {"models": models}
 
 
+@app.get("/api/runtime")
+async def get_runtime() -> dict:
+    return state.runtime_payload()
+
+
+@app.post("/api/models/{model_id}/load")
+async def load_model(model_id: str) -> dict:
+    entry = _get_model(model_id)
+    return await state.load_model(entry)
+
+
+@app.delete("/api/models/{model_id}/load")
+async def unload_model(model_id: str) -> dict:
+    entry = _get_model(model_id)
+    return await state.unload_model(entry)
+
+
 @app.post("/api/models/{model_id}/warmup")
 async def warmup_model(model_id: str) -> dict:
     entry = _get_model(model_id)
-    adapter = await state.adapter_for(entry)
+    adapter = await _loaded_adapter_for(entry)
     health_status = await adapter.warmup()
     return {"model_id": model_id, "status": health_status.status, "detail": health_status.detail}
 
@@ -160,7 +213,7 @@ async def warmup_model(model_id: str) -> dict:
 @app.post("/api/sessions")
 async def create_session(request: CreateSessionRequest) -> dict:
     entry = _get_model(request.model_id)
-    adapter = await state.adapter_for(entry)
+    adapter = await _loaded_adapter_for(entry)
     session = state.sessions.create(model_id=entry.id, persona_prompt=request.persona_prompt, mode=request.mode)
     await adapter.start_session(SessionConfig(session_id=session.id, persona_prompt=session.persona_prompt, mode=session.mode))
     event_log = EventLog(state.sessions.session_dir(session.id) / "events.jsonl")
@@ -172,16 +225,17 @@ async def create_session(request: CreateSessionRequest) -> dict:
 async def interrupt_session(session_id: str) -> dict:
     session = _get_session(session_id)
     entry = _get_model(session.model_id)
-    adapter = await state.adapter_for(entry)
+    adapter = await _loaded_adapter_for(entry)
     await adapter.interrupt(session_id)
     return {"session_id": session_id, "status": "interrupted"}
 
 
 @app.delete("/api/sessions/{session_id}")
 async def close_session(session_id: str) -> dict:
-    session = state.sessions.close(session_id)
+    session = _get_session(session_id)
     entry = _get_model(session.model_id)
-    adapter = await state.adapter_for(entry)
+    adapter = await _loaded_adapter_for(entry)
+    session = state.sessions.close(session_id)
     await adapter.close(session_id)
     return {"session_id": session_id, "active": False}
 
@@ -195,7 +249,7 @@ async def submit_turn(
     timer = Timer()
     session = _get_session(session_id)
     entry = _get_model(session.model_id)
-    adapter = await state.adapter_for(entry)
+    adapter = await _loaded_adapter_for(entry)
     turn_id = new_id("turn")
     suffix = _suffix_for(audio.filename, audio.content_type)
     paths = state.sessions.turn_paths(session_id, turn_id, suffix)
@@ -256,6 +310,14 @@ def _get_model(model_id: str) -> ModelCatalogEntry:
         return state.catalog.get(model_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail={"code": "unknown_model", "message": str(exc)}) from exc
+
+
+async def _loaded_adapter_for(entry: ModelCatalogEntry):
+    try:
+        return await state.adapter_for(entry)
+    except AdapterError as exc:
+        status_code = 409 if exc.code == "model_not_loaded" else 502
+        raise HTTPException(status_code=status_code, detail=exc.as_dict()) from exc
 
 
 def _get_session(session_id: str):
