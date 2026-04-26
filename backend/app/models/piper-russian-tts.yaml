@@ -190,7 +190,7 @@ models:
   - id: utrobin-vits-low-ru-multispeaker
     display_name: Utrobin VITS Low Russian Multispeaker
     hf_repo:
-    source_url: https://huggingface.co/utrobinmv/tts_ru_free_hifi
+    source_url: https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker
     license: Apache-2.0
     size_bytes: 106000000
     size_label: "approx. 106 MB"
@@ -229,7 +229,7 @@ models:
   - id: utrobin-vits-high-ru-multispeaker
     display_name: Utrobin VITS High Russian Multispeaker
     hf_repo:
-    source_url: https://huggingface.co/utrobinmv/tts_ru_free_hifi
+    source_url: https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker
     license: Apache-2.0
     size_bytes: 162000000
     size_label: "approx. 162 MB"
@@ -268,7 +268,7 @@ models:
   - id: bene-ges-ruslan-nemo-500mb
     display_name: Bene Ges Ruslan NeMo Russian TTS
     hf_repo:
-    source_url: https://huggingface.co/bene-ges/ru_ruslan_tts
+    source_url: https://huggingface.co/bene-ges/tts_ru_ipa_fastpitch_ruslan
     license: CC BY-NC 4.0
     size_bytes: 500000000
     size_label: "approx. 500 MB"
@@ -289,7 +289,7 @@ models:
     mode: turn_based
     language_notes: "Russian NeMo TTS candidate for the requested around-500mb tier. Noncommercial license limits runtime use."
     hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Confirm license fit, install NeMo runtime manually, and provide local assets before making it runnable."
+    install_notes: "Catalog-only candidate. Confirm license fit, install NeMo runtime manually, and provide both FastPitch and HiFiGAN local assets before making it runnable."
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
@@ -302,7 +302,7 @@ models:
   - id: frappuccino-vits2-ru-natasha
     display_name: Frappuccino VITS2 Russian Natasha
     hf_repo:
-    source_url: https://huggingface.co/frappuccino/vits2-ru-natasha
+    source_url: https://huggingface.co/frappuccino/vits2_ru_natasha
     license: MIT
     size_bytes: 220000000
     size_label: "approx. 220 MB"
@@ -369,7 +369,7 @@ models:
   - id: f5-tts-russian-voice-clone
     display_name: F5-TTS Russian Voice Clone
     hf_repo:
-    source_url: https://huggingface.co/collections/SHBPH/f5-tts-russian
+    source_url: https://huggingface.co/Misha24-10/F5-TTS_RUSSIAN
     license: CC BY-NC 4.0
     size_bytes: 1000000000
     size_label: "approx. 1 GB"

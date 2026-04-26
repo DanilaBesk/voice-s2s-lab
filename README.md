@@ -79,7 +79,7 @@ data/models/piper/ru_RU-dmitri-medium.onnx
 data/models/piper/ru_RU-dmitri-medium.onnx.json
 ```
 
-The backend never downloads these files automatically. See [docs/tts-research-and-evidence.md](docs/tts-research-and-evidence.md) for the researched model shortlist, license risks, install notes, and runtime evidence.
+The backend never downloads these files automatically. Additional researched TTS candidates are visible as catalog-only entries until a runtime adapter and local assets are added. See [docs/tts-research-and-evidence.md](docs/tts-research-and-evidence.md) for the model shortlist, license risks, install notes, and runtime evidence.
 
 ## Quick Start: Russian TTS
 
@@ -121,6 +121,15 @@ The frontend reads `/api/models` and should not need model-specific branching.
 - `qwen2-5-omni-3b`: the only enabled real speech-to-speech target.
 - `piper-ru-ru-denis-medium`: enabled local Russian text-to-speech target; requires external Piper runtime plus ONNX/JSON files under `data/models/piper`.
 - `piper-ru-ru-dmitri-medium`: enabled local Russian text-to-speech target; requires external Piper runtime plus ONNX/JSON files under `data/models/piper`.
+- `piper-ru-ru-irina-medium`: catalog-only female Piper candidate; blocked until license and asset provenance are verified.
+- `piper-ru-ru-ruslan-medium`: catalog-only male Piper candidate; noncommercial license.
+- `silero-ru-v5-5`: catalog-only Russian multi-voice candidate with male and female voices.
+- `utrobin-vits-low-ru-multispeaker`: catalog-only Apache-2.0 multispeaker candidate for the around-100MB tier.
+- `utrobin-vits-high-ru-multispeaker`: catalog-only Apache-2.0 multispeaker candidate for the closest practical around-250MB tier.
+- `bene-ges-ruslan-nemo-500mb`: catalog-only noncommercial male NeMo candidate for the around-500MB tier.
+- `frappuccino-vits2-ru-natasha`: catalog-only MIT female VITS2 candidate retained as the 500MB-tier female gap filler.
+- `facebook-tts-transformer-ru-cv7-css10`: catalog-only around-1GB candidate blocked by unresolved license status.
+- `f5-tts-russian-voice-clone`: catalog-only around-1GB modern Russian F5-TTS voice-clone candidate; requires reference audio handling.
 - `synthetic-local-tts`: disabled catalog fixture for deterministic backend/frontend tests; it is not a production voice and does not use model weights.
 - `mock-audio`: disabled catalog entry kept only for backend transport unit tests; it is not exposed in the UI.
 
