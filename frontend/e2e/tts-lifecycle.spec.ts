@@ -15,6 +15,32 @@ type ApiCall = {
   body?: unknown;
 };
 
+type ModelFixture = {
+  id: string;
+  display_name: string;
+  hf_repo: string | null;
+  source_url?: string | null;
+  license?: string | null;
+  size_bytes?: number | null;
+  size_label?: string | null;
+  tier?: string | null;
+  availability?: string | null;
+  type: "audio_to_audio" | "text_to_audio";
+  capabilities: string[];
+  voices: Array<{ id: string; display_name: string; language: string; gender?: string | null; sample_rate?: number | null; notes?: string | null }>;
+  adapter: string;
+  runtime: "in_process" | "subprocess";
+  mode: "turn_based";
+  language_notes: string;
+  hardware_notes: string;
+  install_notes: string;
+  supports_prompt: boolean;
+  supports_streaming: boolean;
+  input_sample_rate: number;
+  output_sample_rate: number;
+  default?: boolean;
+};
+
 const s2sModel = {
   id: "qwen2-5-omni-3b",
   display_name: "Qwen2.5 Omni 3B",
@@ -33,37 +59,216 @@ const s2sModel = {
   input_sample_rate: 16000,
   output_sample_rate: 24000,
   default: true,
-};
+} satisfies ModelFixture;
 
 const denisModel = {
   id: "piper-ru-ru-denis-medium",
-  display_name: "Piper ru_RU Denis medium",
+  display_name: "Piper Russian Denis Medium",
   hf_repo: null,
+  source_url: null,
+  license: null,
+  size_bytes: null,
+  size_label: null,
+  tier: null,
+  availability: "available",
   type: "text_to_audio",
   capabilities: ["text_to_audio", "tts"],
-  voices: [{ id: "ru_RU-denis-medium", display_name: "Denis", language: "ru-RU", gender: "male", sample_rate: 22050 }],
+  voices: [
+    {
+      id: "ru_RU-denis-medium",
+      display_name: "Denis",
+      language: "ru-RU",
+      gender: "male",
+      sample_rate: 22050,
+      notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config.",
+    },
+  ],
   adapter: "piper_tts",
   runtime: "subprocess",
   mode: "turn_based",
-  language_notes: "Russian TTS",
-  hardware_notes: "CPU",
-  install_notes: "Piper binary intentionally mocked in e2e",
-  supports_prompt: false,
+  language_notes: "Russian text-to-speech voice for local Piper runtime.",
+  hardware_notes: "Runs on CPU through Piper. No GPU required.",
+  install_notes: "Install Piper separately and place ru_RU-denis-medium.onnx plus ru_RU-denis-medium.onnx.json under data/models/piper. The backend never downloads these files.",
+  supports_prompt: true,
   supports_streaming: false,
-  input_sample_rate: 22050,
+  input_sample_rate: 16000,
   output_sample_rate: 22050,
-};
+} satisfies ModelFixture;
 
 const dmitriModel = {
   ...denisModel,
   id: "piper-ru-ru-dmitri-medium",
-  display_name: "Piper ru_RU Dmitri medium",
-  voices: [{ id: "ru_RU-dmitri-medium", display_name: "Dmitri", language: "ru-RU", gender: "male", sample_rate: 22050 }],
-};
+  display_name: "Piper Russian Dmitri Medium",
+  install_notes: "Install Piper separately and place ru_RU-dmitri-medium.onnx plus ru_RU-dmitri-medium.onnx.json under data/models/piper. The backend never downloads these files.",
+  voices: [
+    {
+      id: "ru_RU-dmitri-medium",
+      display_name: "Dmitri",
+      language: "ru-RU",
+      gender: "male",
+      sample_rate: 22050,
+      notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config.",
+    },
+  ],
+} satisfies ModelFixture;
 
-const models = [s2sModel, denisModel, dmitriModel];
+const catalogOnlyModels = [
+  {
+    ...denisModel,
+    id: "piper-ru-ru-irina-medium",
+    display_name: "Piper Russian Irina Medium",
+    source_url: "https://github.com/rhasspy/piper",
+    license: "Unknown",
+    size_bytes: 65_000_000,
+    size_label: "approx. 65 MB voice package",
+    tier: "lightweight",
+    availability: "license_risk",
+    voices: [
+      {
+        id: "ru_RU-irina-medium",
+        display_name: "Irina",
+        language: "ru-RU",
+        gender: "female",
+        sample_rate: 22050,
+        notes: "Russian Piper medium voice candidate. Kept catalog-only until license and asset provenance are verified.",
+      },
+    ],
+    adapter: "catalog_only_tts",
+    install_notes: "Catalog-only candidate. Do not auto-download; verify license and place matching Piper assets manually before adding a runnable adapter entry.",
+  },
+  {
+    ...denisModel,
+    id: "piper-ru-ru-ruslan-medium",
+    display_name: "Piper Russian Ruslan Medium",
+    source_url: "https://github.com/rhasspy/piper",
+    license: "CC BY-NC-SA 4.0",
+    size_bytes: 65_000_000,
+    size_label: "approx. 65 MB voice package",
+    tier: "lightweight",
+    availability: "noncommercial",
+    voices: [{ id: "ru_RU-ruslan-medium", display_name: "Ruslan", language: "ru-RU", gender: "male", sample_rate: 22050, notes: "Russian Piper medium voice candidate. Noncommercial licensing keeps it out of runnable defaults." }],
+    adapter: "catalog_only_tts",
+    install_notes: "Catalog-only candidate. Do not auto-download; only enable a runnable adapter after confirming license and manually providing assets.",
+  },
+  {
+    ...denisModel,
+    id: "silero-ru-v5-5",
+    display_name: "Silero Russian TTS v5.5",
+    source_url: "https://github.com/snakers4/silero-models",
+    license: "AGPL-3.0",
+    size_bytes: 145_420_684,
+    size_label: "145 MB",
+    tier: "around-100mb",
+    availability: "available",
+    voices: [
+      { id: "baya", display_name: "Baya", language: "ru-RU", gender: "female", sample_rate: 48000 },
+      { id: "kseniya", display_name: "Kseniya", language: "ru-RU", gender: "female", sample_rate: 48000 },
+      { id: "xenia", display_name: "Xenia", language: "ru-RU", gender: "female", sample_rate: 48000 },
+      { id: "aidar", display_name: "Aidar", language: "ru-RU", gender: "male", sample_rate: 48000 },
+      { id: "eugene", display_name: "Eugene", language: "ru-RU", gender: "male", sample_rate: 48000 },
+    ],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+    output_sample_rate: 48000,
+    install_notes: "Catalog-only candidate. Install runtime dependencies and provide assets manually before adding an executable adapter.",
+  },
+  {
+    ...denisModel,
+    id: "utrobin-vits-low-ru-multispeaker",
+    display_name: "Utrobin VITS Low Russian Multispeaker",
+    source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hifi",
+    license: "Apache-2.0",
+    size_bytes: 106_000_000,
+    size_label: "approx. 106 MB",
+    tier: "around-100mb",
+    availability: "available",
+    voices: [
+      { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
+      { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
+    ],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+  },
+  {
+    ...denisModel,
+    id: "utrobin-vits-high-ru-multispeaker",
+    display_name: "Utrobin VITS High Russian Multispeaker",
+    source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hifi",
+    license: "Apache-2.0",
+    size_bytes: 162_000_000,
+    size_label: "approx. 162 MB",
+    tier: "around-250mb",
+    availability: "closest_below_requested_tier",
+    voices: [
+      { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
+      { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
+    ],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+  },
+  {
+    ...denisModel,
+    id: "bene-ges-ruslan-nemo-500mb",
+    display_name: "Bene Ges Ruslan NeMo Russian TTS",
+    source_url: "https://huggingface.co/bene-ges/ru_ruslan_tts",
+    license: "CC BY-NC 4.0",
+    size_bytes: 500_000_000,
+    size_label: "approx. 500 MB",
+    tier: "around-500mb",
+    availability: "noncommercial",
+    voices: [{ id: "ruslan", display_name: "Ruslan", language: "ru-RU", gender: "male", sample_rate: 22050 }],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+  },
+  {
+    ...denisModel,
+    id: "frappuccino-vits2-ru-natasha",
+    display_name: "Frappuccino VITS2 Russian Natasha",
+    source_url: "https://huggingface.co/frappuccino/vits2-ru-natasha",
+    license: "MIT",
+    size_bytes: 220_000_000,
+    size_label: "approx. 220 MB",
+    tier: "around-500mb",
+    availability: "closest_practical_runtime_below_tier",
+    voices: [{ id: "natasha", display_name: "Natasha", language: "ru-RU", gender: "female", sample_rate: 22050 }],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+  },
+  {
+    ...denisModel,
+    id: "facebook-tts-transformer-ru-cv7-css10",
+    display_name: "Facebook TTS Transformer Russian CV7 CSS10",
+    source_url: "https://huggingface.co/facebook/tts_transformer-ru-cv7_css10",
+    license: "Unknown",
+    size_bytes: 1_024_000_000,
+    size_label: "approx. 1 GB",
+    tier: "around-1gb",
+    availability: "license_blocked",
+    voices: [{ id: "default", display_name: "Default Russian", language: "ru-RU", sample_rate: 22050 }],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+  },
+  {
+    ...denisModel,
+    id: "f5-tts-russian-voice-clone",
+    display_name: "F5-TTS Russian Voice Clone",
+    source_url: "https://huggingface.co/collections/SHBPH/f5-tts-russian",
+    license: "CC BY-NC 4.0",
+    size_bytes: 1_000_000_000,
+    size_label: "approx. 1 GB",
+    tier: "around-1gb",
+    availability: "conditional_reference_voice",
+    voices: [{ id: "reference-voice", display_name: "Reference Voice", language: "ru-RU", sample_rate: 24000, notes: "Requires user-provided reference audio for voice cloning." }],
+    adapter: "catalog_only_tts",
+    runtime: "in_process",
+  },
+] satisfies ModelFixture[];
 
-test("covers the TTS model lifecycle through mocked API routes", async ({ page }) => {
+const runnableTtsModels = [denisModel, dmitriModel];
+const models = [s2sModel, ...runnableTtsModels, ...catalogOnlyModels];
+const catalogOnlyModelIds = new Set(catalogOnlyModels.map((model) => model.id));
+
+test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
   const api = await installTtsApiMock(page);
 
   await page.goto("/");
@@ -71,30 +276,102 @@ test("covers the TTS model lifecycle through mocked API routes", async ({ page }
   await page.getByRole("button", { name: "TTS" }).click();
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
-  await expect(modelSelect).toContainText("Piper ru_RU Denis medium");
-  await expect(modelSelect).toContainText("Piper ru_RU Dmitri medium");
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper ru_RU Denis medium");
-  await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(0);
+  await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels, ...catalogOnlyModels].map((model) => model.display_name));
 
-  await modelSelect.selectOption("piper-ru-ru-dmitri-medium");
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper ru_RU Dmitri medium");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
+
+  for (const model of catalogOnlyModels) {
+    await modelSelect.selectOption(model.id);
+    await expect(page.getByLabel("Выбрана модель")).toContainText(model.display_name);
+    await expect(page.getByLabel("Загруженная модель")).toContainText("-");
+  }
+
   expect(api.loadCalls()).toEqual([]);
+});
 
+test("shows expanded catalog metadata and male female multispeaker voice choices", async ({ page }) => {
+  await installTtsApiMock(page);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "TTS" }).click();
+
+  const modelSelect = page.getByRole("combobox", { name: "Модель" });
+  await modelSelect.selectOption("piper-ru-ru-irina-medium");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("Unknown");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("license_risk");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Irina");
+  await expect(page.getByLabel("Голоса модели")).toContainText("ru-RU · female · 22050 Hz");
+  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("ru_RU-irina-medium");
+
+  await modelSelect.selectOption("piper-ru-ru-ruslan-medium");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("CC BY-NC-SA 4.0");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Ruslan");
+  await expect(page.getByLabel("Голоса модели")).toContainText("ru-RU · male · 22050 Hz");
+  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("ru_RU-ruslan-medium");
+
+  await modelSelect.selectOption("silero-ru-v5-5");
+  const voiceSelect = page.getByRole("combobox", { name: "Голос" });
+  await expect(page.getByLabel("Метаданные модели")).toContainText("145 MB");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("around-100mb");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Baya");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Aidar");
+  await expect(voiceSelect.locator("option")).toHaveText(["Baya", "Kseniya", "Xenia", "Aidar", "Eugene"]);
+  await voiceSelect.selectOption("aidar");
+  await expect(voiceSelect).toHaveValue("aidar");
+
+  await modelSelect.selectOption("utrobin-vits-high-ru-multispeaker");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("around-250mb");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
+  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("speaker-0");
+});
+
+test("blocks catalog-only runtime and keeps generation unavailable", async ({ page }) => {
+  const api = await installTtsApiMock(page);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "TTS" }).click();
+  await page.getByRole("combobox", { name: "Модель" }).selectOption("silero-ru-v5-5");
+  await page.getByLabel("Текст").fill("Привет из e2e");
+
+  const generateButton = page.getByRole("button", { name: /сгенерировать/i });
+  await expect(generateButton).toBeDisabled();
+  await page.getByRole("button", { name: /запустить модель/i }).click();
+
+  await expect(page.getByRole("alert")).toContainText("Catalog-only TTS entry is not installed");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("-");
+  await expect(generateButton).toBeDisabled();
+  expect(api.count("POST", "/api/models/silero-ru-v5-5/load")).toBe(1);
+  expect(api.count("POST", "/api/tts")).toBe(0);
+});
+
+test("covers runnable TTS start generation switch unload stop and duplicate-start guards", async ({ page }) => {
+  const api = await installTtsApiMock(page);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "TTS" }).click();
+
+  const modelSelect = page.getByRole("combobox", { name: "Модель" });
   const generateButton = page.getByRole("button", { name: /сгенерировать/i });
   await page.getByLabel("Текст").fill("Привет из e2e");
   await expect(generateButton).toBeDisabled();
   expect(api.count("POST", "/api/tts")).toBe(0);
 
+  await modelSelect.selectOption("piper-ru-ru-dmitri-medium");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Dmitri Medium");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("-");
+  expect(api.loadCalls()).toEqual([]);
+
   await page.getByRole("button", { name: /запустить модель/i }).click();
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper ru_RU Dmitri medium");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Dmitri Medium");
   await expect(generateButton).toBeEnabled();
   expect(api.count("POST", "/api/models/piper-ru-ru-dmitri-medium/load")).toBe(1);
 
   await expect(page.getByRole("button", { name: /модель готова/i })).toBeDisabled();
   expect(api.count("POST", "/api/models/piper-ru-ru-dmitri-medium/load")).toBe(1);
 
+  await page.getByRole("combobox", { name: "Голос" }).selectOption("ru_RU-dmitri-medium");
   await generateButton.click();
   await expect(page.getByText("TTS готов.")).toBeVisible();
   await expect(page.locator(".response-box")).toHaveText("Привет из e2e");
@@ -106,11 +383,11 @@ test("covers the TTS model lifecycle through mocked API routes", async ({ page }
   });
 
   await modelSelect.selectOption("piper-ru-ru-denis-medium");
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper ru_RU Denis medium");
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper ru_RU Dmitri medium");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Dmitri Medium");
 
   await page.getByRole("button", { name: /запустить модель/i }).click();
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper ru_RU Denis medium");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Denis Medium");
   expect(api.count("DELETE", "/api/models/piper-ru-ru-dmitri-medium/load")).toBe(1);
   expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
 
@@ -181,10 +458,11 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
     const loadMatch = url.pathname.match(/^\/api\/models\/([^/]+)\/load$/);
     if (loadMatch && method === "POST") {
       const modelId = decodeURIComponent(loadMatch[1]);
-      runtime =
-        options.failLoadFor === modelId
-          ? { model_id: modelId, status: "failed", detail: "Piper runtime missing" }
-          : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
+      if (catalogOnlyModelIds.has(modelId)) {
+        runtime = { model_id: modelId, status: "failed", detail: "Catalog-only TTS entry is not installed. Add a runtime adapter and local model assets before loading." };
+        return fulfillJson(route, runtime);
+      }
+      runtime = options.failLoadFor === modelId ? { model_id: modelId, status: "failed", detail: "Piper runtime missing" } : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
       return fulfillJson(route, runtime);
     }
 
@@ -253,29 +531,28 @@ function readConfiguredValue(parts: string[]): string {
 async function scanAppCodeForPersistenceClients(): Promise<string[]> {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   const files = await listFiles(root);
-  const terms = [
-    ["DATA", "BASE"],
-    ["DB", "_"],
-    ["POST", "GRES"],
-    ["MY", "SQL"],
-    ["SQL", "ITE"],
-    ["sql", "alchemy"],
-    ["pr", "isma"],
-    ["psy", "copg"],
-    ["async", "pg"],
-    ["sql", "ite"],
-    ["post", "gres"],
-    ["my", "sql"],
-    ["mongo", "db"],
-    ["re", "dis"],
-  ].map((parts) => parts.join(""));
+  const patterns = [
+    /\bDATABASE\b/i,
+    /\bDB_[A-Z0-9_]*\b/,
+    /\bPOSTGRES(?:QL)?\b/i,
+    /\bMYSQL\b/i,
+    /\bSQLITE\b/i,
+    /\bsqlalchemy\b/i,
+    /\bprisma\b/i,
+    /\bpsycopg\b/i,
+    /\basyncpg\b/i,
+    /\bsqlite\b/i,
+    /\bpostgres\b/i,
+    /\bmysql\b/i,
+    /\bmongodb\b/i,
+    /\bredis\b/i,
+  ];
   const hits: string[] = [];
 
   for (const file of files) {
     const text = await readFile(file, "utf8").catch(() => "");
-    const lowerText = text.toLowerCase();
-    for (const term of terms) {
-      if (lowerText.includes(term.toLowerCase())) {
+    for (const pattern of patterns) {
+      if (pattern.test(text)) {
         hits.push(path.relative(root, file));
         break;
       }
