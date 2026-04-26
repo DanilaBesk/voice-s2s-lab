@@ -25,6 +25,12 @@ class ModelCatalogEntry(BaseModel):
     id: str
     display_name: str
     hf_repo: str | None = None
+    source_url: str | None = None
+    license: str | None = None
+    size_bytes: int | None = None
+    size_label: str | None = None
+    tier: str | None = None
+    availability: str = "available"
     type: ModelType
     capabilities: list[CapabilityType] = Field(default_factory=list)
     voices: list[VoiceMetadata] = Field(default_factory=list)
