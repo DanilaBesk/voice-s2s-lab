@@ -33,6 +33,14 @@ const TALKER_TOKENS_PER_SECOND = 50;
 type AppMode = "s2s" | "tts";
 type CallStatus = "idle" | "connecting" | "listening" | "capturing" | "processing" | "playing" | "ending" | "ended";
 type TtsStatus = "idle" | "generating" | "completed";
+type CatalogModelMetadata = ModelEntry & {
+  source_url?: string | null;
+  license?: string | null;
+  size_bytes?: number | null;
+  size_label?: string | null;
+  tier?: string | null;
+  availability?: string | null;
+};
 
 const EMPTY_RUNTIME: RuntimeResponse = { model_id: null, status: "not_loaded", detail: null };
 
@@ -71,6 +79,7 @@ export function App() {
 
   const modeModels = useMemo(() => models.filter((model) => (appMode === "tts" ? supportsTts(model) : supportsS2s(model))), [appMode, models]);
   const selectedModel = useMemo(() => models.find((model) => model.id === selectedModelId), [models, selectedModelId]);
+  const selectedCatalogModel = selectedModel as CatalogModelMetadata | undefined;
   const loadedModel = useMemo(() => models.find((model) => model.id === runtime.model_id), [models, runtime.model_id]);
   const callActive = callStatus === "connecting" || callStatus === "listening" || callStatus === "capturing" || callStatus === "processing" || callStatus === "playing";
   const selectedModelReady = Boolean(selectedModel && runtime.model_id === selectedModel.id && runtime.status === "ready");
@@ -461,7 +470,6 @@ export function App() {
               {modeModels.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.display_name}
-                  {model.status === "ready" ? " (готово)" : ` (${model.status})`}
                 </option>
               ))}
             </select>
@@ -481,6 +489,24 @@ export function App() {
                 </div>
               </div>
               <p className="status-detail">{selectedModel.status_detail || runtimeDetailForModel(selectedModel, runtime) || modelHint(selectedModel, selectedModelReady)}</p>
+              <dl className="metadata-grid" aria-label="Метаданные модели">
+                {modelMetadataRows(selectedCatalogModel).map((row) => (
+                  <div key={row.label}>
+                    <dt>{row.label}</dt>
+                    <dd>{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              {selectedModel.voices.length > 0 && (
+                <div className="voice-list" aria-label="Голоса модели">
+                  {selectedModel.voices.map((voice) => (
+                    <div className="voice-row" key={voice.id}>
+                      <strong>{voice.display_name}</strong>
+                      <span>{voiceDetails(voice)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -645,6 +671,35 @@ function modelHint(model: ModelEntry, ready: boolean): string {
   if (ready) return "Модель загружена и готова.";
   if (model.status === "failed" || model.status === "error") return "Модель не загрузилась.";
   return "Модель не загружена.";
+}
+
+function modelMetadataRows(model: CatalogModelMetadata | undefined): Array<{ label: string; value: string }> {
+  if (!model) return [];
+  const rows: Array<[string, string | null | undefined]> = [
+    ["Источник", model.source_url ?? model.hf_repo],
+    ["Лицензия", model.license],
+    ["Размер", model.size_label ?? formatBytes(model.size_bytes)],
+    ["Tier", model.tier],
+    ["Доступность", model.availability],
+  ];
+  return rows.flatMap(([label, value]) => (value ? [{ label, value }] : []));
+}
+
+function voiceDetails(voice: ModelEntry["voices"][number]): string {
+  return [voice.language, voice.gender, voice.sample_rate ? `${voice.sample_rate} Hz` : null, voice.notes].filter(Boolean).join(" · ");
+}
+
+function formatBytes(sizeBytes: number | null | undefined): string | null {
+  if (!sizeBytes || !Number.isFinite(sizeBytes)) return null;
+  const units = ["B", "KB", "MB", "GB"];
+  let value = sizeBytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const rounded = value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1);
+  return `${rounded} ${units[unitIndex]}`;
 }
 
 function humanError(err: unknown): string {
