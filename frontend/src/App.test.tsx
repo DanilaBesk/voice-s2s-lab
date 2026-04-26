@@ -194,8 +194,9 @@ describe("App", () => {
 
     await user.click(await screen.findByRole("button", { name: "TTS" }));
 
-    expect(screen.getByRole("option", { name: "Piper ru_RU Denis medium" })).toBeVisible();
-    expect(screen.getByRole("option", { name: "Piper ru_RU Dmitri medium" })).toBeVisible();
+    expect(screen.getByRole("option", { name: /Piper ru_RU Denis medium/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /Piper ru_RU Dmitri medium/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /63 MB · мужчина · Piper ru_RU Denis medium · available/ })).toBeVisible();
     expect(screen.queryByRole("option", { name: /готово|not_loaded|ready|failed|loading/i })).not.toBeInTheDocument();
   });
 

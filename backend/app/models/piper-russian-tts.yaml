@@ -2,6 +2,12 @@ models:
   - id: piper-ru-ru-denis-medium
     display_name: Piper Russian Denis Medium
     hf_repo:
+    source_url: https://huggingface.co/rhasspy/piper-voices
+    license: CC0 model card; Piper runtime GPL-3.0-or-later
+    size_bytes: 63201294
+    size_label: "63 MB"
+    tier: lightweight
+    availability: available
     type: text_to_audio
     capabilities:
       - text_to_audio
@@ -34,6 +40,12 @@ models:
   - id: piper-ru-ru-dmitri-medium
     display_name: Piper Russian Dmitri Medium
     hf_repo:
+    source_url: https://huggingface.co/rhasspy/piper-voices
+    license: CC0 model card; Piper runtime GPL-3.0-or-later
+    size_bytes: 63201294
+    size_label: "63 MB"
+    tier: lightweight
+    availability: available
     type: text_to_audio
     capabilities:
       - text_to_audio

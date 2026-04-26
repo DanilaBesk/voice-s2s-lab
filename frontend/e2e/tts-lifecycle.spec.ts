@@ -65,11 +65,11 @@ const denisModel = {
   id: "piper-ru-ru-denis-medium",
   display_name: "Piper Russian Denis Medium",
   hf_repo: null,
-  source_url: null,
-  license: null,
-  size_bytes: null,
-  size_label: null,
-  tier: null,
+  source_url: "https://huggingface.co/rhasspy/piper-voices",
+  license: "CC0 model card; Piper runtime GPL-3.0-or-later",
+  size_bytes: 63_201_294,
+  size_label: "63 MB",
+  tier: "lightweight",
   availability: "available",
   type: "text_to_audio",
   capabilities: ["text_to_audio", "tts"],
@@ -276,7 +276,16 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   await page.getByRole("button", { name: "TTS" }).click();
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
-  await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels, ...catalogOnlyModels].map((model) => model.display_name));
+  await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels, ...catalogOnlyModels].sort(compareTtsCatalogModels).map(modelOptionLabel));
+  const optionTexts = await modelSelect.locator("option").allTextContents();
+  expect(optionTexts).toEqual(expect.arrayContaining([
+    "63 MB · мужчина · Piper Russian Denis Medium · available",
+    "100MB · мужчина+женщина · Silero Russian TTS v5.5 · available",
+    "250MB · мужчина+женщина · Utrobin VITS High Russian Multispeaker · closest_below_requested_tier",
+    "500MB · мужчина · Bene Ges Ruslan NeMo Russian TTS · noncommercial",
+    "500MB · женщина · Frappuccino VITS2 Russian Natasha · closest_practical_runtime_below_tier",
+    "1GB · референс-голос · F5-TTS Russian Voice Clone · conditional_reference_voice",
+  ]));
 
   await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
@@ -503,6 +512,48 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
     loadCalls: () => calls.filter((call) => call.path.endsWith("/load")).map((call) => `${call.method} ${call.path}`),
     lastBody: (apiPath: string) => [...calls].reverse().find((call) => call.path === apiPath)?.body,
   };
+}
+
+function modelOptionLabel(model: ModelFixture): string {
+  return [tierLabel(model), voiceGenderSummary(model), model.display_name, model.availability].filter(Boolean).join(" · ");
+}
+
+function compareTtsCatalogModels(left: ModelFixture, right: ModelFixture): number {
+  return tierRank(left) - tierRank(right) || voiceRank(left) - voiceRank(right) || left.display_name.localeCompare(right.display_name);
+}
+
+function tierRank(model: ModelFixture): number {
+  if (model.tier === "lightweight") return 0;
+  if (model.tier === "around-100mb") return 1;
+  if (model.tier === "around-250mb") return 2;
+  if (model.tier === "around-500mb") return 3;
+  if (model.tier === "around-1gb") return 4;
+  return 10;
+}
+
+function voiceRank(model: ModelFixture): number {
+  const genders = new Set(model.voices.map((voice) => voice.gender).filter(Boolean));
+  if (genders.has("male") && genders.has("female")) return 0;
+  if (genders.has("male")) return 1;
+  if (genders.has("female")) return 2;
+  return 3;
+}
+
+function tierLabel(model: ModelFixture): string | null {
+  if (model.tier === "around-100mb") return "100MB";
+  if (model.tier === "around-250mb") return "250MB";
+  if (model.tier === "around-500mb") return "500MB";
+  if (model.tier === "around-1gb") return "1GB";
+  return model.size_label ?? model.tier ?? null;
+}
+
+function voiceGenderSummary(model: ModelFixture): string | null {
+  const genders = new Set(model.voices.map((voice) => voice.gender).filter(Boolean));
+  if (genders.has("male") && genders.has("female")) return "мужчина+женщина";
+  if (genders.has("male")) return "мужчина";
+  if (genders.has("female")) return "женщина";
+  if (model.voices.some((voice) => voice.id.includes("reference"))) return "референс-голос";
+  return model.voices.length ? "пол не указан" : null;
 }
 
 function fulfillJson(route: Route, payload: unknown, status = 200) {

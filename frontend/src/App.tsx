@@ -77,7 +77,10 @@ export function App() {
   const runtimeRef = useRef<RuntimeResponse>(EMPTY_RUNTIME);
   const vadRef = useRef(new UtteranceVad());
 
-  const modeModels = useMemo(() => models.filter((model) => (appMode === "tts" ? supportsTts(model) : supportsS2s(model))), [appMode, models]);
+  const modeModels = useMemo(() => {
+    const candidates = models.filter((model) => (appMode === "tts" ? supportsTts(model) : supportsS2s(model)));
+    return appMode === "tts" ? [...candidates].sort(compareTtsCatalogModels) : candidates;
+  }, [appMode, models]);
   const selectedModel = useMemo(() => models.find((model) => model.id === selectedModelId), [models, selectedModelId]);
   const selectedCatalogModel = selectedModel as CatalogModelMetadata | undefined;
   const loadedModel = useMemo(() => models.find((model) => model.id === runtime.model_id), [models, runtime.model_id]);
@@ -469,7 +472,7 @@ export function App() {
             <select id="model-select" value={selectedModelId} onChange={(event) => setSelectedModelId(event.target.value)} disabled={callActive || modelBusy}>
               {modeModels.map((model) => (
                 <option key={model.id} value={model.id}>
-                  {model.display_name}
+                  {modelOptionLabel(model, appMode)}
                 </option>
               ))}
             </select>
@@ -683,6 +686,58 @@ function modelMetadataRows(model: CatalogModelMetadata | undefined): Array<{ lab
     ["Доступность", model.availability],
   ];
   return rows.flatMap(([label, value]) => (value ? [{ label, value }] : []));
+}
+
+function modelOptionLabel(model: ModelEntry, appMode: AppMode): string {
+  if (appMode !== "tts") return model.display_name;
+  const catalogModel = model as CatalogModelMetadata;
+  const parts = [tierLabel(catalogModel), voiceGenderSummary(model), model.display_name, catalogModel.availability].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function compareTtsCatalogModels(left: ModelEntry, right: ModelEntry): number {
+  const leftCatalog = left as CatalogModelMetadata;
+  const rightCatalog = right as CatalogModelMetadata;
+  return (
+    tierRank(leftCatalog) - tierRank(rightCatalog) ||
+    voiceRank(left) - voiceRank(right) ||
+    left.display_name.localeCompare(right.display_name)
+  );
+}
+
+function tierRank(model: CatalogModelMetadata): number {
+  const tier = model.tier ?? "";
+  if (tier === "lightweight") return 0;
+  if (tier === "around-100mb") return 1;
+  if (tier === "around-250mb") return 2;
+  if (tier === "around-500mb") return 3;
+  if (tier === "around-1gb") return 4;
+  return 10;
+}
+
+function voiceRank(model: ModelEntry): number {
+  const genders = new Set(model.voices.map((voice) => voice.gender).filter(Boolean));
+  if (genders.has("male") && genders.has("female")) return 0;
+  if (genders.has("male")) return 1;
+  if (genders.has("female")) return 2;
+  return 3;
+}
+
+function tierLabel(model: CatalogModelMetadata): string | null {
+  if (model.tier === "around-100mb") return "100MB";
+  if (model.tier === "around-250mb") return "250MB";
+  if (model.tier === "around-500mb") return "500MB";
+  if (model.tier === "around-1gb") return "1GB";
+  return model.size_label ?? model.tier ?? formatBytes(model.size_bytes);
+}
+
+function voiceGenderSummary(model: ModelEntry): string | null {
+  const genders = new Set(model.voices.map((voice) => voice.gender).filter(Boolean));
+  if (genders.has("male") && genders.has("female")) return "мужчина+женщина";
+  if (genders.has("male")) return "мужчина";
+  if (genders.has("female")) return "женщина";
+  if (model.voices.some((voice) => voice.id.includes("reference"))) return "референс-голос";
+  return model.voices.length ? "пол не указан" : null;
 }
 
 function voiceDetails(voice: ModelEntry["voices"][number]): string {
