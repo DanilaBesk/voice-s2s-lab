@@ -1,10 +1,12 @@
 # TTS Research And Evidence
 
-This document is the GRACE-style acceptance and runtime evidence for `voice-s2s-lab-y9s.6`. There were no existing canonical GRACE files in this repository, so this file and the README are the documentation surface for the TTS research decision. It is not a task tracker.
+This document is the acceptance and runtime evidence for the Russian TTS catalog. It is not a task tracker.
 
-## Accepted Runtime Contract
+## Runtime Contract
 
-The implemented TTS mode uses the same explicit model lifecycle as the S2S path:
+The UI and `/api/models` must expose only installable runtime entries. Metadata-only or blocked candidates are not selectable and must not appear as working models.
+
+The implemented lifecycle is:
 
 - catalog discovery: `GET /api/models`
 - runtime state: `GET /api/runtime`
@@ -13,82 +15,72 @@ The implemented TTS mode uses the same explicit model lifecycle as the S2S path:
 - TTS generation: `POST /api/tts`
 - generated audio fetch: `GET /api/tts/{turn_id}/audio`
 
-Selecting a model in the frontend is not a load operation. Users start the selected model explicitly, can stop it explicitly, and can see selected-vs-loaded state and generation errors. TTS generation is expected to fail visibly if no compatible TTS model is loaded.
+Selecting a model in the frontend is not a load operation. The user starts the selected model explicitly. Generation remains disabled until the selected model is loaded and ready.
 
-## Recommended Runtime Split
+## Install Command
 
-Use Piper Russian medium voices as the default runnable local TTS path when GPL-3.0-or-later runtime obligations are acceptable or the Piper runtime is distributed and isolated separately from this project.
-
-Piper is still the best small runnable local ONNX path because it supports CPU execution, uses simple ONNX plus JSON assets, has Russian medium voices, and does not require committing weights to this repository. The catalog currently includes two runnable Piper entries:
-
-- `piper-ru-ru-denis-medium` with voice `ru_RU-denis-medium`
-- `piper-ru-ru-dmitri-medium` with voice `ru_RU-dmitri-medium`
-
-The expanded catalog also exposes researched candidates as metadata-only `catalog_only_tts` entries. These entries are selectable in the UI, but explicit load returns a visible not-installed or policy-blocked diagnostic until a runtime adapter, local assets, and license/runtime boundaries are implemented. Selection never downloads, loads, or warms model weights.
-
-The model files are intentionally absent from git and must be placed manually under:
-
-```text
-data/models/piper/ru_RU-denis-medium.onnx
-data/models/piper/ru_RU-denis-medium.onnx.json
-data/models/piper/ru_RU-dmitri-medium.onnx
-data/models/piper/ru_RU-dmitri-medium.onnx.json
-```
-
-Each ONNX file is about 63,201,294 bytes, plus a small JSON config. The model cards for these Piper voices are CC0, while the Piper runtime source used here must be treated as GPL-3.0-or-later unless the packaging strategy changes.
-
-## Research Shortlist
-
-| Candidate | Fit | Size/runtime notes | License and distribution risk | Sources |
-| --- | --- | --- | --- | --- |
-| Piper `ru_RU-denis-medium`, `ru_RU-dmitri-medium` | Runnable small local Russian default | CPU default; ONNX plus JSON; each Russian medium ONNX is about 63,201,294 bytes | Voice model cards are CC0; runtime is GPL-3.0-or-later, so packaging must respect copyleft obligations or isolate the runtime | [piper1-gpl](https://github.com/OHF-Voice/piper1-gpl), [piper-tts PyPI](https://pypi.org/project/piper-tts/), [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) |
-| Piper `ru_RU-irina-medium`, `ru_RU-ruslan-medium` | Extra lightweight female/male Piper candidates | ONNX files are about 63,201,294 bytes per voice; same expected CPU Piper runtime | Irina remains license/provenance risk; Ruslan is noncommercial/share-alike, so both stay catalog-only | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) |
-| Silero Russian v5.5 | Compact multi-voice quality candidate | About 145,420,684 bytes; voices include `baya`, `kseniya`, `xenia`, `aidar`, `eugene` | Runtime/license boundary needs implementation review before enabling; catalog-only now | [silero-models](https://github.com/snakers4/silero-models), [silero PyPI](https://pypi.org/project/silero/) |
-| Utrobin VITS low multispeaker | Best low-risk around-100MB male/female candidate | HF metadata: created 2024-04-28, updated 2025-08-25; ONNX about 50.8 MB, safetensors about 60.4 MB; speaker `0` female and `1` male | Apache-2.0; needs a VITS runtime adapter and local assets | [utrobin low](https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker) |
-| Utrobin VITS high multispeaker | Closest practical around-250MB male/female candidate | HF metadata: created/updated 2024-05-25; safetensors about 159.7 MB; speaker `0` female and `1` male | Apache-2.0; below the requested 250MB tier but the best verified fit found | [utrobin high](https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker) |
-| Bene Ges FastPitch Ruslan plus HiFiGAN | True around-500MB male pipeline | FastPitch is about 183.3 MB and HiFiGAN about 339.2 MB, together about 522.5 MB; NeMo runtime | Noncommercial; requires paired acoustic model plus vocoder, so catalog-only | [FastPitch](https://huggingface.co/bene-ges/tts_ru_ipa_fastpitch_ruslan), [HiFiGAN](https://huggingface.co/bene-ges/tts_ru_hifigan_ruslan) |
-| Frappuccino VITS2 Natasha | Female 500MB-tier gap filler | ONNX is about 156.6 MB; PyTorch checkpoint is about 565.5 MB | MIT; practical ONNX runtime is below 500MB, but it covers the female side of the tier | [frappuccino/vits2_ru_natasha](https://huggingface.co/frappuccino/vits2_ru_natasha) |
-| Misha24-10 F5-TTS Russian | Modern around-1GB voice-clone candidate | HF metadata: created 2025-05-19, updated 2026-01-13; inference safetensors about 1.348 GB; 193 likes in the MCP pass | CC-BY-NC-4.0; gender depends on user-provided reference audio, so reference consent and upload boundaries are required before runtime | [Misha24-10/F5-TTS_RUSSIAN](https://huggingface.co/Misha24-10/F5-TTS_RUSSIAN) |
-| Facebook TTS Transformer Russian CV7 CSS10 | 1GB-class legacy fallback | Older Fairseq candidate retained only as catalog-only license-blocked metadata | License status unresolved; not a runnable candidate | [facebook/tts_transformer-ru-cv7_css10](https://huggingface.co/facebook/tts_transformer-ru-cv7_css10) |
-
-## Research Exclusions
-
-- `hotstone228/F5-TTS-Russian`: similar 1.348GB F5 class, but weaker Hub metadata for this pass and noncommercial share-alike terms.
-- `NeuroDonu/RU-XTTS-DonuModel`: about 5.6GB and outside the requested size tiers.
-- `joefox/tts_vits_ru_hf` and `imperialwool/silero-model-v3-ru`: compact alternatives, but less clear or less favorable than the Utrobin/Piper choices for this catalog.
-- standalone `bene-ges` FastPitch or HiFiGAN alone: not a full TTS pipeline unless paired.
-
-## Adding Or Testing A TTS Model
-
-1. Add or update a YAML catalog entry under `backend/app/models/` with `type: text_to_audio`, `tts` or `text_to_audio` capabilities, adapter name, sample rates, and install notes.
-2. Put external model assets under `data/models/...`; do not commit model weights.
-3. Add an adapter under `backend/app/adapters/` and register it in `backend/app/adapters/__init__.py`.
-4. Keep model load explicit. Selecting a model in the UI must not download, load, or warm up the model.
-5. Verify the API lifecycle manually or through tests:
+Install model assets declaratively from the manifest:
 
 ```bash
-curl http://127.0.0.1:18000/api/models
-curl http://127.0.0.1:18000/api/runtime
-curl -X POST http://127.0.0.1:18000/api/models/piper-ru-ru-denis-medium/load
-curl -X POST http://127.0.0.1:18000/api/tts \
-  -H 'Content-Type: application/json' \
-  -d '{"model_id":"piper-ru-ru-denis-medium","text":"Привет. Это тест русской озвучки."}'
-curl -X DELETE http://127.0.0.1:18000/api/models/piper-ru-ru-denis-medium/load
+cd backend
+uv sync --extra dev --extra tts
+uv run --extra tts python ../scripts/install-tts-models.py --all
 ```
 
-For automated tests, use the disabled `synthetic-local-tts` fixture through mocked or test-safe runtime paths. It produces deterministic WAV output and does not require model weights.
+Install a subset:
+
+```bash
+cd backend
+uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker vosk-tts-ru-0-9-multi
+```
+
+The manifest is `backend/app/tts-assets.yaml`. Model weights remain outside git under `data/models/...`.
+
+## Enabled Models
+
+| Model ID | Tier | Voices | License | Runtime |
+| --- | --- | --- | --- | --- |
+| `piper-ru-ru-denis-medium` | lightweight, 63 MB | Denis, male | MIT repo; dataset CC0 | `piper_tts` subprocess, ONNX + JSON |
+| `piper-ru-ru-dmitri-medium` | lightweight, 63 MB | Dmitri, male | MIT repo; dataset CC0 | `piper_tts` subprocess, ONNX + JSON |
+| `utrobin-vits-low-ru-multispeaker` | around 100MB request, 60 MB actual | speaker 0 female, speaker 1 male | Apache-2.0 | `transformers_vits_tts` |
+| `utrobin-vits-high-ru-multispeaker` | around 250MB request, 160 MB actual | speaker 0 female, speaker 1 male | Apache-2.0 | `transformers_vits_tts` |
+| `vosk-tts-ru-0-9-multi` | around 1GB request, 747 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
+
+There is no strict enabled 500MB Russian male+female model in the current catalog. The researched 500MB-class candidates either have noncommercial licensing, incomplete runtime boundaries, or only one gender. They are documented as exclusions rather than exposed as fake runtime entries.
+
+## Excluded Candidates
+
+| Candidate | Reason |
+| --- | --- |
+| `piper-ru-ru-irina-medium` | The rhasspy model card lists the source dataset license as unknown. |
+| `piper-ru-ru-ruslan-medium` | Noncommercial/share-alike source licensing. |
+| `silero-ru-v5-5` | Requires a separate runtime implementation and license/distribution review before it can be a real runnable entry. |
+| `bene-ges/tts_ru_ipa_fastpitch_ruslan` plus HiFiGAN | Around 500MB-class pipeline, but CC-BY-NC and male-only. |
+| `frappuccino/vits2_ru_natasha` | MIT and female, but not male+female and needs a separate VITS2 runtime path. |
+| `facebook/tts_transformer-ru-cv7_css10` | Older Fairseq model with unresolved license status. |
+| `Misha24-10/F5-TTS_RUSSIAN` and similar F5 models | Noncommercial and reference-voice based; not a fixed male/female local voice catalog entry. |
+| `facebook/mms-tts-rus` / `indicnode/mms-tts-rus` | CC-BY-NC. |
+
+## Sources
+
+- [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices): MIT repo metadata, updated 2026-04-07, Russian Piper ONNX assets.
+- [utrobin low](https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker): Apache-2.0, Transformers VITS, two speakers, updated 2025-08-25.
+- [utrobin high](https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker): Apache-2.0, Transformers VITS, two speakers, updated 2024-05-25.
+- [alphacep/vosk-tts-ru-multi](https://huggingface.co/alphacep/vosk-tts-ru-multi): Apache-2.0, three female and two male voices; Vosk model list provides `vosk-model-tts-ru-0.9-multi.zip`.
 
 ## Verification Evidence
 
-Evidence recorded for the TTS documentation scope on 2026-04-26:
+Evidence recorded on 2026-04-26:
 
 | Command | Evidence |
 | --- | --- |
-| Hugging Face MCP `hub_repo_search` / `hub_repo_details` | Confirmed modern Russian TTS sources and popularity metadata, including `rhasspy/piper-voices`, `Misha24-10/F5-TTS_RUSSIAN`, `facebook/mms-tts-rus`, `utrobinmv/tts_ru_free_hf_vits_low_multispeaker`, `utrobinmv/tts_ru_free_hf_vits_high_multispeaker`, `frappuccino/vits2_ru_natasha`, and Bene Ges NeMo candidates. |
-| HF resolve `HEAD` checks for model assets | Confirmed representative asset sizes: Piper Russian ONNX files about 63,201,294 bytes; Utrobin low ONNX/safetensors about 50.8/60.4 MB; Utrobin high about 159.7 MB; Frappuccino Natasha ONNX/PyTorch about 156.6/565.5 MB; Bene Ges FastPitch+HiFiGAN about 522.5 MB; Misha F5 inference safetensors about 1.348 GB. |
-| `cd backend && uv run python -m pytest -q` | Backend tests pass: 25 passed, 1 skipped. Covers expanded catalog metadata, `catalog_only_tts`, API model exposure, load failure diagnostics, and existing runtime behavior. |
-| `cd frontend && npm test -- --run` | Frontend unit tests pass: 14 passed. Covers generic metadata rendering, voice details, runtime-free option labels, and load-error persistence. |
-| `cd frontend && npm run test:e2e` | Playwright tests pass: 6 passed. Covers expanded catalog rendering, selection without loading, male/female/multispeaker voices, catalog-only load failure, generation only after explicit start, unload-on-switch, stop/unload, repeated-start guard, and no DB/user/dev persistence touch. |
-| `cd frontend && npm run build` | Frontend production build succeeds. |
-
-This project currently has no configured persistence host, port, or name. The TTS implementation and its e2e evidence use mocked API/runtime paths rather than a production, development, or test persistence service.
+| Hugging Face MCP `hub_repo_search` / `hub_repo_details` | Confirmed current license/runtime metadata for Piper, Utrobin, Vosk, F5, MMS, Bene Ges, and other candidates. |
+| `uv run --with huggingface-hub ... get_hf_file_metadata` | Confirmed Piper and Utrobin file sizes used in the install manifest. |
+| `uv run --with vosk-tts==0.3.61 ... model-list.json` | Confirmed Vosk `vosk-model-tts-ru-0.9-multi.zip`, size `782787154`, md5 `2f8b6dbf64e912f9ee7eda50ba2d3c80`, and current non-obsolete status. |
+| `cd backend && uv run python -m pytest -q` | 27 passed, 2 skipped. Includes runnable-only catalog, manifest coverage, missing-asset diagnostics, and installer dry-run declaration. |
+| `cd backend && uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker` | Installed the real Apache-2.0 low VITS male+female model into `data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_low_multispeaker`. |
+| `cd backend && VOICE_S2S_RUN_REAL_TTS_TEST=true uv run --extra tts python -m pytest tests/test_tts_real_smoke.py -q` | 1 passed. Real local model load and WAV generation for `utrobin-vits-low-ru-multispeaker`, `speaker-1`. |
+| `cd frontend && npm test -- --run` | 13 passed. Covers visible metadata, voice details, and explicit lifecycle behavior. |
+| `cd frontend && npm run build` | Production frontend build succeeds. |
+| `cd frontend && npm run test:e2e` | 5 passed. Covers dropdown labels, no blocked/noncommercial catalog entries, male/female choices, explicit start/generate/switch/stop flow, and load errors. |
+| Browser check at `http://127.0.0.1:5174/` | TTS dropdown showed only `piper-ru-ru-denis-medium`, `piper-ru-ru-dmitri-medium`, `utrobin-vits-low-ru-multispeaker`, `utrobin-vits-high-ru-multispeaker`, and `vosk-tts-ru-0-9-multi`; no `catalog_only_tts` entries were present. |

@@ -64,22 +64,23 @@ const dmitriModel = {
   voices: [{ id: "ru_RU-dmitri-medium", display_name: "Dmitri", language: "ru-RU", gender: "male", sample_rate: 22050 }],
 };
 
-const catalogOnlyModel = {
+const vitsLowModel = {
   ...denisModel,
-  id: "catalog-only-small-tts",
-  display_name: "Catalog-only small TTS",
-  hf_repo: "example/catalog-only-small-tts",
-  source_url: null,
+  id: "utrobin-vits-low-ru-multispeaker",
+  display_name: "Utrobin VITS Low Russian Multispeaker",
+  hf_repo: "utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
+  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
   license: "Apache-2.0",
-  size_bytes: 250_000_000,
-  size_label: null,
-  tier: "candidate-250mb",
-  availability: "catalog_only",
+  size_bytes: 60_360_313,
+  size_label: "60 MB",
+  tier: "around-100mb",
+  availability: "available",
   voices: [
-    { id: "catalog-small-female", display_name: "Catalog Female", language: "ru-RU", gender: "female", sample_rate: 24000, notes: "catalog preview" },
-    { id: "catalog-small-male", display_name: "Catalog Male", language: "ru-RU", gender: "male", sample_rate: 24000, notes: null },
+    { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050, notes: "woman" },
+    { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050, notes: null },
   ],
-  adapter: "catalog_only_tts",
+  adapter: "transformers_vits_tts",
+  runtime: "in_process",
 };
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -98,7 +99,7 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
 
     if (url.endsWith("/api/models") && method === "GET") {
       return jsonResponse({
-        models: [s2sModel, denisModel, dmitriModel, catalogOnlyModel].map((model) => ({
+        models: [s2sModel, denisModel, dmitriModel, vitsLowModel].map((model) => ({
           ...model,
           status: runtime.model_id === model.id ? runtime.status : "not_loaded",
           status_detail: runtime.model_id === model.id ? runtime.detail : null,
@@ -113,9 +114,6 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
     const loadMatch = url.match(/\/api\/models\/([^/]+)\/load$/);
     if (loadMatch && method === "POST") {
       const modelId = decodeURIComponent(loadMatch[1]);
-      if (modelId === catalogOnlyModel.id) {
-        return jsonResponse({ detail: { code: "catalog_only", message: "Catalog-only candidate cannot be loaded yet" } }, 409);
-      }
       runtime = options.loadFails ? { model_id: modelId, status: "failed", detail: "Piper runtime missing" } : { model_id: modelId, status: "ready", detail: "Loaded" };
       return jsonResponse(runtime);
     }
@@ -217,15 +215,15 @@ describe("App", () => {
     expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("Denis");
     expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("ru-RU · male · 22050 Hz · clear narration");
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "catalog-only-small-tts");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "utrobin-vits-low-ru-multispeaker");
 
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("example/catalog-only-small-tts");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("utrobinmv/tts_ru_free_hf_vits_low_multispeaker");
     expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("Apache-2.0");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("238 MB");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("candidate-250mb");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("catalog_only");
-    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("Catalog Female");
-    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("ru-RU · female · 24000 Hz · catalog preview");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("60 MB");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("around-100mb");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("available");
+    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("Speaker 0");
+    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("ru-RU · female · 22050 Hz · woman");
   });
 
   it("starts and stops models through explicit lifecycle endpoints", async () => {
@@ -276,22 +274,6 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /запустить модель/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Piper runtime missing");
-  });
-
-  it("keeps catalog-only load errors visible", async () => {
-    const user = userEvent.setup();
-    setupFetch();
-
-    render(<App />);
-
-    await user.click(await screen.findByRole("button", { name: "TTS" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "catalog-only-small-tts");
-    await user.click(screen.getByRole("button", { name: /запустить модель/i }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Catalog-only candidate cannot be loaded yet");
-
-    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "piper-ru-ru-denis-medium");
-    expect(screen.getByRole("alert")).toHaveTextContent("Catalog-only candidate cannot be loaded yet");
   });
 
   it("loads the S2S model before creating a session when backend runtime is not ready", async () => {

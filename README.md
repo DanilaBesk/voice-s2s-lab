@@ -79,7 +79,15 @@ data/models/piper/ru_RU-dmitri-medium.onnx
 data/models/piper/ru_RU-dmitri-medium.onnx.json
 ```
 
-The backend never downloads these files automatically. Additional researched TTS candidates are visible as catalog-only entries until a runtime adapter and local assets are added. See [docs/tts-research-and-evidence.md](docs/tts-research-and-evidence.md) for the model shortlist, license risks, install notes, and runtime evidence.
+Install TTS assets declaratively from the manifest instead of collecting model files by hand:
+
+```bash
+cd backend
+uv sync --extra dev --extra tts
+uv run --extra tts python ../scripts/install-tts-models.py --all
+```
+
+The manifest is [backend/app/tts-assets.yaml](backend/app/tts-assets.yaml). The backend does not expose metadata-only TTS entries as runnable models. See [docs/tts-research-and-evidence.md](docs/tts-research-and-evidence.md) for the enabled model list, excluded candidates, license notes, and runtime evidence.
 
 ## Quick Start: Russian TTS
 
@@ -88,6 +96,7 @@ The local Piper runtime is optional and isolated behind the same catalog/adapter
 ```bash
 cd backend
 uv sync --extra dev --extra tts
+uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker
 uv run --extra dev --extra tts uvicorn app.main:app --host 127.0.0.1 --port 18000
 ```
 
@@ -99,7 +108,7 @@ npm install
 VITE_API_BASE_URL=http://127.0.0.1:18000 npm run dev -- --host 127.0.0.1 --port 5174
 ```
 
-Open http://127.0.0.1:5174, switch to TTS, select `Piper Russian Denis Medium`, press `Запустить модель`, enter Russian text, and press `Сгенерировать`.
+Open http://127.0.0.1:5174, switch to TTS, select an installed TTS model, press `Запустить модель`, enter Russian text, and press `Сгенерировать`.
 
 The current local smoke run used `ru_RU-denis-medium` from `rhasspy/piper-voices` with these SHA-256 checksums:
 
@@ -119,17 +128,11 @@ The frontend reads `/api/models` and should not need model-specific branching.
 ## Current Runtime Surface
 
 - `qwen2-5-omni-3b`: the only enabled real speech-to-speech target.
-- `piper-ru-ru-denis-medium`: enabled local Russian text-to-speech target; requires external Piper runtime plus ONNX/JSON files under `data/models/piper`.
-- `piper-ru-ru-dmitri-medium`: enabled local Russian text-to-speech target; requires external Piper runtime plus ONNX/JSON files under `data/models/piper`.
-- `piper-ru-ru-irina-medium`: catalog-only female Piper candidate; blocked until license and asset provenance are verified.
-- `piper-ru-ru-ruslan-medium`: catalog-only male Piper candidate; noncommercial license.
-- `silero-ru-v5-5`: catalog-only Russian multi-voice candidate with male and female voices.
-- `utrobin-vits-low-ru-multispeaker`: catalog-only Apache-2.0 multispeaker candidate for the around-100MB tier.
-- `utrobin-vits-high-ru-multispeaker`: catalog-only Apache-2.0 multispeaker candidate for the closest practical around-250MB tier.
-- `bene-ges-ruslan-nemo-500mb`: catalog-only noncommercial male NeMo candidate for the around-500MB tier.
-- `frappuccino-vits2-ru-natasha`: catalog-only MIT female VITS2 candidate retained as the 500MB-tier female gap filler.
-- `facebook-tts-transformer-ru-cv7-css10`: catalog-only around-1GB candidate blocked by unresolved license status.
-- `f5-tts-russian-voice-clone`: catalog-only around-1GB modern Russian F5-TTS voice-clone candidate; requires reference audio handling.
+- `piper-ru-ru-denis-medium`: enabled local Russian male text-to-speech target; installable through `scripts/install-tts-models.py`.
+- `piper-ru-ru-dmitri-medium`: enabled local Russian male text-to-speech target; installable through `scripts/install-tts-models.py`.
+- `utrobin-vits-low-ru-multispeaker`: enabled Apache-2.0 Russian male+female VITS target for the around-100MB request.
+- `utrobin-vits-high-ru-multispeaker`: enabled Apache-2.0 Russian male+female VITS target for the closest practical around-250MB request.
+- `vosk-tts-ru-0-9-multi`: enabled Apache-2.0 Russian male+female Vosk TTS target for the around-1GB request.
 - `synthetic-local-tts`: disabled catalog fixture for deterministic backend/frontend tests; it is not a production voice and does not use model weights.
 - `mock-audio`: disabled catalog entry kept only for backend transport unit tests; it is not exposed in the UI.
 
@@ -147,9 +150,11 @@ The active API surface includes explicit model lifecycle endpoints for both S2S 
 ## Verification Commands
 
 ```bash
-cd backend && uv run --extra dev --extra qwen pytest
+cd backend && uv run python -m pytest -q
 cd frontend && npm run test -- --run src && npm run build
 cd frontend && npm run test:e2e
+cd backend && uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker
+cd backend && VOICE_S2S_RUN_REAL_TTS_TEST=true uv run --extra tts python -m pytest tests/test_tts_real_smoke.py -q
 cd backend && \
   HF_HUB_CACHE=../data/models/huggingface \
   HF_HUB_DISABLE_XET=1 \

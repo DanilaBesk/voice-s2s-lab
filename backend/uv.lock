@@ -1945,7 +1945,13 @@ test = [
     { name = "pytest-asyncio" },
 ]
 tts = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
     { name = "piper-tts" },
+    { name = "scipy" },
+    { name = "torch" },
+    { name = "transformers" },
+    { name = "vosk-tts" },
 ]
 
 [package.metadata]
@@ -1954,6 +1960,8 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
     { name = "httpx", marker = "extra == 'test'", specifier = ">=0.27.0" },
+    { name = "huggingface-hub", marker = "extra == 'tts'", specifier = ">=0.34.0" },
+    { name = "numpy", marker = "extra == 'tts'", specifier = ">=1.26" },
     { name = "pillow", marker = "extra == 'qwen'", specifier = ">=10.4.0" },
     { name = "piper-tts", marker = "extra == 'tts'", specifier = "==1.4.2" },
     { name = "pydantic", specifier = ">=2.8.0" },
@@ -1965,13 +1973,31 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "qwen-omni-utils", marker = "extra == 'qwen'", specifier = "==0.0.9" },
+    { name = "scipy", marker = "extra == 'tts'", specifier = ">=1.12" },
     { name = "soundfile", marker = "extra == 'qwen'", specifier = "==0.13.1" },
     { name = "torch", marker = "extra == 'qwen'", specifier = ">=2.1,<2.7" },
+    { name = "torch", marker = "extra == 'tts'", specifier = ">=2.1,<2.7" },
     { name = "torchvision", marker = "extra == 'qwen'", specifier = ">=0.21,<0.22" },
     { name = "transformers", marker = "extra == 'qwen'", specifier = "==4.52.3" },
+    { name = "transformers", marker = "extra == 'tts'", specifier = "==4.52.3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
+    { name = "vosk-tts", marker = "extra == 'tts'", specifier = "==0.3.61" },
 ]
 provides-extras = ["dev", "test", "qwen", "tts"]
+
+[[package]]
+name = "vosk-tts"
+version = "0.3.61"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "onnxruntime" },
+    { name = "requests" },
+    { name = "tokenizers" },
+    { name = "tqdm" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/63/1bbf380da363422c14f6b613dc1ab0d50eae867785fde23c23c805d8606b/vosk_tts-0.3.61-py3-none-any.whl", hash = "sha256:7dfb17d933b9de65e0a87a215c70793892157cc35acbee9b67cc4e78f3bc40b5", size = 12306, upload-time = "2025-08-08T00:25:50.282Z" },
+]
 
 [[package]]
 name = "watchfiles"

@@ -1,0 +1,86 @@
+models:
+  - id: piper-ru-ru-denis-medium
+    install_dir: data/models/piper
+    notes: "Piper Russian Denis medium ONNX voice from rhasspy/piper-voices."
+    assets:
+      - hf_repo: rhasspy/piper-voices
+        hf_file: ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx
+        path: ru_RU-denis-medium.onnx
+        size_bytes: 63201294
+      - hf_repo: rhasspy/piper-voices
+        hf_file: ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx.json
+        path: ru_RU-denis-medium.onnx.json
+        size_bytes: 4823
+
+  - id: piper-ru-ru-dmitri-medium
+    install_dir: data/models/piper
+    notes: "Piper Russian Dmitri medium ONNX voice from rhasspy/piper-voices."
+    assets:
+      - hf_repo: rhasspy/piper-voices
+        hf_file: ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx
+        path: ru_RU-dmitri-medium.onnx
+        size_bytes: 63201294
+      - hf_repo: rhasspy/piper-voices
+        hf_file: ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx.json
+        path: ru_RU-dmitri-medium.onnx.json
+        size_bytes: 4824
+
+  - id: utrobin-vits-low-ru-multispeaker
+    install_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_low_multispeaker
+    notes: "Apache-2.0 Transformers VITS Russian multispeaker model: speaker 0 woman, speaker 1 man."
+    assets:
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_low_multispeaker
+        hf_file: config.json
+        path: config.json
+        size_bytes: 1741
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_low_multispeaker
+        hf_file: model.safetensors
+        path: model.safetensors
+        size_bytes: 60357152
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_low_multispeaker
+        hf_file: special_tokens_map.json
+        path: special_tokens_map.json
+        size_bytes: 279
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_low_multispeaker
+        hf_file: tokenizer_config.json
+        path: tokenizer_config.json
+        size_bytes: 634
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_low_multispeaker
+        hf_file: vocab.json
+        path: vocab.json
+        size_bytes: 507
+
+  - id: utrobin-vits-high-ru-multispeaker
+    install_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_high_multispeaker
+    notes: "Apache-2.0 Transformers VITS Russian multispeaker model: speaker 0 woman, speaker 1 man."
+    assets:
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_high_multispeaker
+        hf_file: config.json
+        path: config.json
+        size_bytes: 1785
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_high_multispeaker
+        hf_file: model.safetensors
+        path: model.safetensors
+        size_bytes: 159690732
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_high_multispeaker
+        hf_file: special_tokens_map.json
+        path: special_tokens_map.json
+        size_bytes: 279
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_high_multispeaker
+        hf_file: tokenizer_config.json
+        path: tokenizer_config.json
+        size_bytes: 634
+      - hf_repo: utrobinmv/tts_ru_free_hf_vits_high_multispeaker
+        hf_file: vocab.json
+        path: vocab.json
+        size_bytes: 507
+
+  - id: vosk-tts-ru-0-9-multi
+    install_dir: data/models/vosk
+    notes: "Apache-2.0 Vosk Russian multispeaker TTS model, three female and two male speakers."
+    assets:
+      - url: https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.9-multi.zip
+        path: vosk-model-tts-ru-0.9-multi.zip
+        archive_root: vosk-model-tts-ru-0.9-multi
+        size_bytes: 782787154
+        md5: 2f8b6dbf64e912f9ee7eda50ba2d3c80

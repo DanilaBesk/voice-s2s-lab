@@ -112,161 +112,64 @@ const dmitriModel = {
   ],
 } satisfies ModelFixture;
 
-const catalogOnlyModels = [
-  {
-    ...denisModel,
-    id: "piper-ru-ru-irina-medium",
-    display_name: "Piper Russian Irina Medium",
-    source_url: "https://github.com/rhasspy/piper",
-    license: "Unknown",
-    size_bytes: 65_000_000,
-    size_label: "approx. 65 MB voice package",
-    tier: "lightweight",
-    availability: "license_risk",
-    voices: [
-      {
-        id: "ru_RU-irina-medium",
-        display_name: "Irina",
-        language: "ru-RU",
-        gender: "female",
-        sample_rate: 22050,
-        notes: "Russian Piper medium voice candidate. Kept catalog-only until license and asset provenance are verified.",
-      },
-    ],
-    adapter: "catalog_only_tts",
-    install_notes: "Catalog-only candidate. Do not auto-download; verify license and place matching Piper assets manually before adding a runnable adapter entry.",
-  },
-  {
-    ...denisModel,
-    id: "piper-ru-ru-ruslan-medium",
-    display_name: "Piper Russian Ruslan Medium",
-    source_url: "https://github.com/rhasspy/piper",
-    license: "CC BY-NC-SA 4.0",
-    size_bytes: 65_000_000,
-    size_label: "approx. 65 MB voice package",
-    tier: "lightweight",
-    availability: "noncommercial",
-    voices: [{ id: "ru_RU-ruslan-medium", display_name: "Ruslan", language: "ru-RU", gender: "male", sample_rate: 22050, notes: "Russian Piper medium voice candidate. Noncommercial licensing keeps it out of runnable defaults." }],
-    adapter: "catalog_only_tts",
-    install_notes: "Catalog-only candidate. Do not auto-download; only enable a runnable adapter after confirming license and manually providing assets.",
-  },
-  {
-    ...denisModel,
-    id: "silero-ru-v5-5",
-    display_name: "Silero Russian TTS v5.5",
-    source_url: "https://github.com/snakers4/silero-models",
-    license: "AGPL-3.0",
-    size_bytes: 145_420_684,
-    size_label: "145 MB",
-    tier: "around-100mb",
-    availability: "available",
-    voices: [
-      { id: "baya", display_name: "Baya", language: "ru-RU", gender: "female", sample_rate: 48000 },
-      { id: "kseniya", display_name: "Kseniya", language: "ru-RU", gender: "female", sample_rate: 48000 },
-      { id: "xenia", display_name: "Xenia", language: "ru-RU", gender: "female", sample_rate: 48000 },
-      { id: "aidar", display_name: "Aidar", language: "ru-RU", gender: "male", sample_rate: 48000 },
-      { id: "eugene", display_name: "Eugene", language: "ru-RU", gender: "male", sample_rate: 48000 },
-    ],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-    output_sample_rate: 48000,
-    install_notes: "Catalog-only candidate. Install runtime dependencies and provide assets manually before adding an executable adapter.",
-  },
-  {
-    ...denisModel,
-    id: "utrobin-vits-low-ru-multispeaker",
-    display_name: "Utrobin VITS Low Russian Multispeaker",
-    source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
-    license: "Apache-2.0",
-    size_bytes: 106_000_000,
-    size_label: "approx. 106 MB",
-    tier: "around-100mb",
-    availability: "available",
-    voices: [
-      { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
-      { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
-    ],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-  },
-  {
-    ...denisModel,
-    id: "utrobin-vits-high-ru-multispeaker",
-    display_name: "Utrobin VITS High Russian Multispeaker",
-    source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker",
-    license: "Apache-2.0",
-    size_bytes: 162_000_000,
-    size_label: "approx. 162 MB",
-    tier: "around-250mb",
-    availability: "closest_below_requested_tier",
-    voices: [
-      { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
-      { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
-    ],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-  },
-  {
-    ...denisModel,
-    id: "bene-ges-ruslan-nemo-500mb",
-    display_name: "Bene Ges Ruslan NeMo Russian TTS",
-    source_url: "https://huggingface.co/bene-ges/tts_ru_ipa_fastpitch_ruslan",
-    license: "CC BY-NC 4.0",
-    size_bytes: 500_000_000,
-    size_label: "approx. 500 MB",
-    tier: "around-500mb",
-    availability: "noncommercial",
-    voices: [{ id: "ruslan", display_name: "Ruslan", language: "ru-RU", gender: "male", sample_rate: 22050 }],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-  },
-  {
-    ...denisModel,
-    id: "frappuccino-vits2-ru-natasha",
-    display_name: "Frappuccino VITS2 Russian Natasha",
-    source_url: "https://huggingface.co/frappuccino/vits2_ru_natasha",
-    license: "MIT",
-    size_bytes: 220_000_000,
-    size_label: "approx. 220 MB",
-    tier: "around-500mb",
-    availability: "closest_practical_runtime_below_tier",
-    voices: [{ id: "natasha", display_name: "Natasha", language: "ru-RU", gender: "female", sample_rate: 22050 }],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-  },
-  {
-    ...denisModel,
-    id: "facebook-tts-transformer-ru-cv7-css10",
-    display_name: "Facebook TTS Transformer Russian CV7 CSS10",
-    source_url: "https://huggingface.co/facebook/tts_transformer-ru-cv7_css10",
-    license: "Unknown",
-    size_bytes: 1_024_000_000,
-    size_label: "approx. 1 GB",
-    tier: "around-1gb",
-    availability: "license_blocked",
-    voices: [{ id: "default", display_name: "Default Russian", language: "ru-RU", sample_rate: 22050 }],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-  },
-  {
-    ...denisModel,
-    id: "f5-tts-russian-voice-clone",
-    display_name: "F5-TTS Russian Voice Clone",
-    source_url: "https://huggingface.co/Misha24-10/F5-TTS_RUSSIAN",
-    license: "CC BY-NC 4.0",
-    size_bytes: 1_000_000_000,
-    size_label: "approx. 1 GB",
-    tier: "around-1gb",
-    availability: "conditional_reference_voice",
-    voices: [{ id: "reference-voice", display_name: "Reference Voice", language: "ru-RU", sample_rate: 24000, notes: "Requires user-provided reference audio for voice cloning." }],
-    adapter: "catalog_only_tts",
-    runtime: "in_process",
-  },
-] satisfies ModelFixture[];
+const vitsLowModel = {
+  ...denisModel,
+  id: "utrobin-vits-low-ru-multispeaker",
+  display_name: "Utrobin VITS Low Russian Multispeaker",
+  hf_repo: "utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
+  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
+  license: "Apache-2.0",
+  size_bytes: 60_360_313,
+  size_label: "60 MB",
+  tier: "around-100mb",
+  availability: "available",
+  voices: [
+    { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
+    { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
+  ],
+  adapter: "transformers_vits_tts",
+  runtime: "in_process",
+  install_notes: "Run scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker",
+} satisfies ModelFixture;
 
-const runnableTtsModels = [denisModel, dmitriModel];
-const models = [s2sModel, ...runnableTtsModels, ...catalogOnlyModels];
-const catalogOnlyModelIds = new Set(catalogOnlyModels.map((model) => model.id));
+const vitsHighModel = {
+  ...vitsLowModel,
+  id: "utrobin-vits-high-ru-multispeaker",
+  display_name: "Utrobin VITS High Russian Multispeaker",
+  hf_repo: "utrobinmv/tts_ru_free_hf_vits_high_multispeaker",
+  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker",
+  size_bytes: 159_693_937,
+  size_label: "160 MB",
+  tier: "around-250mb",
+  availability: "closest_below_requested_tier",
+  install_notes: "Run scripts/install-tts-models.py --models utrobin-vits-high-ru-multispeaker",
+} satisfies ModelFixture;
+
+const voskMultiModel = {
+  ...denisModel,
+  id: "vosk-tts-ru-0-9-multi",
+  display_name: "Vosk Russian TTS 0.9 Multi",
+  hf_repo: "alphacep/vosk-tts-ru-multi",
+  source_url: "https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.9-multi.zip",
+  license: "Apache-2.0",
+  size_bytes: 782_787_154,
+  size_label: "747 MiB",
+  tier: "around-1gb",
+  availability: "available",
+  voices: [
+    { id: "F01", display_name: "F01", language: "ru-RU", gender: "female", sample_rate: 22050 },
+    { id: "F02", display_name: "F02", language: "ru-RU", gender: "female", sample_rate: 22050 },
+    { id: "F03", display_name: "F03", language: "ru-RU", gender: "female", sample_rate: 22050 },
+    { id: "M01", display_name: "M01", language: "ru-RU", gender: "male", sample_rate: 22050 },
+    { id: "M02", display_name: "M02", language: "ru-RU", gender: "male", sample_rate: 22050 },
+  ],
+  adapter: "vosk_tts",
+  runtime: "in_process",
+  install_notes: "Run scripts/install-tts-models.py --models vosk-tts-ru-0-9-multi",
+} satisfies ModelFixture;
+
+const runnableTtsModels = [denisModel, dmitriModel, vitsLowModel, vitsHighModel, voskMultiModel];
+const models = [s2sModel, ...runnableTtsModels];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
   const api = await installTtsApiMock(page);
@@ -276,25 +179,20 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   await page.getByRole("button", { name: "TTS" }).click();
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
-  await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels, ...catalogOnlyModels].sort(compareTtsCatalogModels).map(modelOptionLabel));
+  await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels].sort(compareTtsCatalogModels).map(modelOptionLabel));
   const optionTexts = await modelSelect.locator("option").allTextContents();
   expect(optionTexts).toEqual(expect.arrayContaining([
     "63 MB · мужчина · Piper Russian Denis Medium · available",
-    "100MB · мужчина+женщина · Silero Russian TTS v5.5 · available",
+    "100MB · мужчина+женщина · Utrobin VITS Low Russian Multispeaker · available",
     "250MB · мужчина+женщина · Utrobin VITS High Russian Multispeaker · closest_below_requested_tier",
-    "500MB · мужчина · Bene Ges Ruslan NeMo Russian TTS · noncommercial",
-    "500MB · женщина · Frappuccino VITS2 Russian Natasha · closest_practical_runtime_below_tier",
-    "1GB · референс-голос · F5-TTS Russian Voice Clone · conditional_reference_voice",
+    "1GB · мужчина+женщина · Vosk Russian TTS 0.9 Multi · available",
   ]));
+  expect(optionTexts.join(" ")).not.toContain("catalog");
+  expect(optionTexts.join(" ")).not.toContain("noncommercial");
+  expect(optionTexts.join(" ")).not.toContain("F5-TTS");
 
   await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-
-  for (const model of catalogOnlyModels) {
-    await modelSelect.selectOption(model.id);
-    await expect(page.getByLabel("Выбрана модель")).toContainText(model.display_name);
-    await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  }
 
   expect(api.loadCalls()).toEqual([]);
 });
@@ -306,53 +204,27 @@ test("shows expanded catalog metadata and male female multispeaker voice choices
   await page.getByRole("button", { name: "TTS" }).click();
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
-  await modelSelect.selectOption("piper-ru-ru-irina-medium");
-  await expect(page.getByLabel("Метаданные модели")).toContainText("Unknown");
-  await expect(page.getByLabel("Метаданные модели")).toContainText("license_risk");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Irina");
-  await expect(page.getByLabel("Голоса модели")).toContainText("ru-RU · female · 22050 Hz");
-  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("ru_RU-irina-medium");
-
-  await modelSelect.selectOption("piper-ru-ru-ruslan-medium");
-  await expect(page.getByLabel("Метаданные модели")).toContainText("CC BY-NC-SA 4.0");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Ruslan");
-  await expect(page.getByLabel("Голоса модели")).toContainText("ru-RU · male · 22050 Hz");
-  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("ru_RU-ruslan-medium");
-
-  await modelSelect.selectOption("silero-ru-v5-5");
+  await modelSelect.selectOption("utrobin-vits-low-ru-multispeaker");
   const voiceSelect = page.getByRole("combobox", { name: "Голос" });
-  await expect(page.getByLabel("Метаданные модели")).toContainText("145 MB");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("60 MB");
   await expect(page.getByLabel("Метаданные модели")).toContainText("around-100mb");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Baya");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Aidar");
-  await expect(voiceSelect.locator("option")).toHaveText(["Baya", "Kseniya", "Xenia", "Aidar", "Eugene"]);
-  await voiceSelect.selectOption("aidar");
-  await expect(voiceSelect).toHaveValue("aidar");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
+  await expect(voiceSelect.locator("option")).toHaveText(["Speaker 0", "Speaker 1"]);
+  await voiceSelect.selectOption("speaker-1");
+  await expect(voiceSelect).toHaveValue("speaker-1");
 
   await modelSelect.selectOption("utrobin-vits-high-ru-multispeaker");
   await expect(page.getByLabel("Метаданные модели")).toContainText("around-250mb");
   await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
   await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
-  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("speaker-0");
-});
+  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("speaker-1");
 
-test("blocks catalog-only runtime and keeps generation unavailable", async ({ page }) => {
-  const api = await installTtsApiMock(page);
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "TTS" }).click();
-  await page.getByRole("combobox", { name: "Модель" }).selectOption("silero-ru-v5-5");
-  await page.getByLabel("Текст").fill("Привет из e2e");
-
-  const generateButton = page.getByRole("button", { name: /сгенерировать/i });
-  await expect(generateButton).toBeDisabled();
-  await page.getByRole("button", { name: /запустить модель/i }).click();
-
-  await expect(page.getByRole("alert")).toContainText("Catalog-only TTS entry is not installed");
-  await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  await expect(generateButton).toBeDisabled();
-  expect(api.count("POST", "/api/models/silero-ru-v5-5/load")).toBe(1);
-  expect(api.count("POST", "/api/tts")).toBe(0);
+  await modelSelect.selectOption("vosk-tts-ru-0-9-multi");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("747 MiB");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("around-1gb");
+  await expect(page.getByLabel("Голоса модели")).toContainText("F01");
+  await expect(page.getByLabel("Голоса модели")).toContainText("M02");
 });
 
 test("covers runnable TTS start generation switch unload stop and duplicate-start guards", async ({ page }) => {
@@ -467,10 +339,6 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
     const loadMatch = url.pathname.match(/^\/api\/models\/([^/]+)\/load$/);
     if (loadMatch && method === "POST") {
       const modelId = decodeURIComponent(loadMatch[1]);
-      if (catalogOnlyModelIds.has(modelId)) {
-        runtime = { model_id: modelId, status: "failed", detail: "Catalog-only TTS entry is not installed. Add a runtime adapter and local model assets before loading." };
-        return fulfillJson(route, runtime);
-      }
       runtime = options.failLoadFor === modelId ? { model_id: modelId, status: "failed", detail: "Piper runtime missing" } : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
       return fulfillJson(route, runtime);
     }

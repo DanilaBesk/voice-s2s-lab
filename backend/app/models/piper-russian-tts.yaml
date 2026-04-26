@@ -1,10 +1,10 @@
 models:
   - id: piper-ru-ru-denis-medium
     display_name: Piper Russian Denis Medium
-    hf_repo:
+    hf_repo: rhasspy/piper-voices
     source_url: https://huggingface.co/rhasspy/piper-voices
-    license: CC0 model card; Piper runtime GPL-3.0-or-later
-    size_bytes: 63201294
+    license: MIT
+    size_bytes: 63206117
     size_label: "63 MB"
     tier: lightweight
     availability: available
@@ -18,13 +18,13 @@ models:
         language: ru-RU
         gender: male
         sample_rate: 22050
-        notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config."
+        notes: "Russian Piper medium voice. Dataset license in model card: CC0."
     adapter: piper_tts
     runtime: subprocess
     mode: turn_based
-    language_notes: "Russian text-to-speech voice for local Piper runtime."
+    language_notes: "Russian text-to-speech voice for local Piper runtime. The rhasspy/piper-voices repo is MIT and the voice model card lists the dataset license as CC0."
     hardware_notes: "Runs on CPU through Piper. No GPU required."
-    install_notes: "Install Piper separately and place ru_RU-denis-medium.onnx plus ru_RU-denis-medium.onnx.json under data/models/piper. The backend never downloads these files."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models piper-ru-ru-denis-medium"
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
@@ -39,10 +39,10 @@ models:
 
   - id: piper-ru-ru-dmitri-medium
     display_name: Piper Russian Dmitri Medium
-    hf_repo:
+    hf_repo: rhasspy/piper-voices
     source_url: https://huggingface.co/rhasspy/piper-voices
-    license: CC0 model card; Piper runtime GPL-3.0-or-later
-    size_bytes: 63201294
+    license: MIT
+    size_bytes: 63206118
     size_label: "63 MB"
     tier: lightweight
     availability: available
@@ -56,13 +56,13 @@ models:
         language: ru-RU
         gender: male
         sample_rate: 22050
-        notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config."
+        notes: "Russian Piper medium voice. Dataset license in model card: CC0."
     adapter: piper_tts
     runtime: subprocess
     mode: turn_based
-    language_notes: "Russian text-to-speech voice for local Piper runtime."
+    language_notes: "Russian text-to-speech voice for local Piper runtime. The rhasspy/piper-voices repo is MIT and the voice model card lists the dataset license as CC0."
     hardware_notes: "Runs on CPU through Piper. No GPU required."
-    install_notes: "Install Piper separately and place ru_RU-dmitri-medium.onnx plus ru_RU-dmitri-medium.onnx.json under data/models/piper. The backend never downloads these files."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models piper-ru-ru-dmitri-medium"
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
@@ -75,137 +75,13 @@ models:
       config_path: data/models/piper/ru_RU-dmitri-medium.onnx.json
       timeout_s: 120
 
-  - id: piper-ru-ru-irina-medium
-    display_name: Piper Russian Irina Medium
-    hf_repo:
-    source_url: https://github.com/rhasspy/piper
-    license: Unknown
-    size_bytes: 65000000
-    size_label: "approx. 65 MB voice package"
-    tier: lightweight
-    availability: license_risk
-    type: text_to_audio
-    capabilities:
-      - text_to_audio
-      - tts
-    voices:
-      - id: ru_RU-irina-medium
-        display_name: Irina
-        language: ru-RU
-        gender: female
-        sample_rate: 22050
-        notes: "Russian Piper medium voice candidate. Kept catalog-only until license and asset provenance are verified."
-    adapter: catalog_only_tts
-    runtime: subprocess
-    mode: turn_based
-    language_notes: "Russian text-to-speech voice candidate. Catalog-only because the license and redistributable asset source need verification."
-    hardware_notes: "Expected CPU Piper runtime if validated later. This catalog entry does not load or download weights."
-    install_notes: "Catalog-only candidate. Do not auto-download; verify license and place matching Piper assets manually before adding a runnable adapter entry."
-    supports_prompt: true
-    supports_streaming: false
-    input_sample_rate: 16000
-    output_sample_rate: 22050
-    enabled: true
-    default: false
-    config:
-      load_error: "Catalog-only TTS entry is blocked until Irina license and asset provenance are verified."
-
-  - id: piper-ru-ru-ruslan-medium
-    display_name: Piper Russian Ruslan Medium
-    hf_repo:
-    source_url: https://github.com/rhasspy/piper
-    license: CC BY-NC-SA 4.0
-    size_bytes: 65000000
-    size_label: "approx. 65 MB voice package"
-    tier: lightweight
-    availability: noncommercial
-    type: text_to_audio
-    capabilities:
-      - text_to_audio
-      - tts
-    voices:
-      - id: ru_RU-ruslan-medium
-        display_name: Ruslan
-        language: ru-RU
-        gender: male
-        sample_rate: 22050
-        notes: "Russian Piper medium voice candidate. Noncommercial licensing keeps it out of runnable defaults."
-    adapter: catalog_only_tts
-    runtime: subprocess
-    mode: turn_based
-    language_notes: "Russian text-to-speech voice candidate with noncommercial licensing."
-    hardware_notes: "Expected CPU Piper runtime if validated later. This catalog entry does not load or download weights."
-    install_notes: "Catalog-only candidate. Do not auto-download; only enable a runnable adapter after confirming license and manually providing assets."
-    supports_prompt: true
-    supports_streaming: false
-    input_sample_rate: 16000
-    output_sample_rate: 22050
-    enabled: true
-    default: false
-    config:
-      load_error: "Catalog-only TTS entry is not installed because Ruslan is noncommercial and requires manually supplied assets."
-
-  - id: silero-ru-v5-5
-    display_name: Silero Russian TTS v5.5
-    hf_repo:
-    source_url: https://github.com/snakers4/silero-models
-    license: AGPL-3.0
-    size_bytes: 145420684
-    size_label: "145 MB"
-    tier: around-100mb
-    availability: available
-    type: text_to_audio
-    capabilities:
-      - text_to_audio
-      - tts
-    voices:
-      - id: baya
-        display_name: Baya
-        language: ru-RU
-        gender: female
-        sample_rate: 48000
-      - id: kseniya
-        display_name: Kseniya
-        language: ru-RU
-        gender: female
-        sample_rate: 48000
-      - id: xenia
-        display_name: Xenia
-        language: ru-RU
-        gender: female
-        sample_rate: 48000
-      - id: aidar
-        display_name: Aidar
-        language: ru-RU
-        gender: male
-        sample_rate: 48000
-      - id: eugene
-        display_name: Eugene
-        language: ru-RU
-        gender: male
-        sample_rate: 48000
-    adapter: catalog_only_tts
-    runtime: in_process
-    mode: turn_based
-    language_notes: "Russian multi-voice neural TTS candidate. Catalog-only until a runtime adapter and locally supplied model assets are added."
-    hardware_notes: "CPU execution may be practical, but this catalog entry never loads or downloads model weights."
-    install_notes: "Catalog-only candidate. Install runtime dependencies and provide assets manually before adding an executable adapter."
-    supports_prompt: true
-    supports_streaming: false
-    input_sample_rate: 16000
-    output_sample_rate: 48000
-    enabled: true
-    default: false
-    config:
-      load_error: "Catalog-only TTS entry is not installed. Add a Silero runtime adapter and local model assets before loading."
-
   - id: utrobin-vits-low-ru-multispeaker
     display_name: Utrobin VITS Low Russian Multispeaker
-    hf_repo:
+    hf_repo: utrobinmv/tts_ru_free_hf_vits_low_multispeaker
     source_url: https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker
     license: Apache-2.0
-    size_bytes: 106000000
-    size_label: "approx. 106 MB"
+    size_bytes: 60360313
+    size_label: "60 MB"
     tier: around-100mb
     availability: available
     type: text_to_audio
@@ -223,12 +99,12 @@ models:
         language: ru-RU
         gender: male
         sample_rate: 22050
-    adapter: catalog_only_tts
+    adapter: transformers_vits_tts
     runtime: in_process
     mode: turn_based
-    language_notes: "Russian multispeaker VITS candidate for the requested around-100mb tier."
-    hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Add a dedicated VITS adapter and manually supplied assets before making it runnable."
+    language_notes: "Russian Apache-2.0 multispeaker VITS model. Model card defines speaker 0 as woman and speaker 1 as man."
+    hardware_notes: "Runs through Transformers on CPU or CUDA/MPS if configured."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker"
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
@@ -236,15 +112,24 @@ models:
     enabled: true
     default: false
     config:
-      load_error: "Catalog-only TTS entry is not installed. Add a VITS runtime adapter and local assets before loading."
+      model_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_low_multispeaker
+      required_files:
+        - config.json
+        - model.safetensors
+        - tokenizer_config.json
+        - vocab.json
+      speaker_map:
+        speaker-0: 0
+        speaker-1: 1
+      device: cpu
 
   - id: utrobin-vits-high-ru-multispeaker
     display_name: Utrobin VITS High Russian Multispeaker
-    hf_repo:
+    hf_repo: utrobinmv/tts_ru_free_hf_vits_high_multispeaker
     source_url: https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker
     license: Apache-2.0
-    size_bytes: 162000000
-    size_label: "approx. 162 MB"
+    size_bytes: 159693937
+    size_label: "160 MB"
     tier: around-250mb
     availability: closest_below_requested_tier
     type: text_to_audio
@@ -262,12 +147,12 @@ models:
         language: ru-RU
         gender: male
         sample_rate: 22050
-    adapter: catalog_only_tts
+    adapter: transformers_vits_tts
     runtime: in_process
     mode: turn_based
-    language_notes: "Russian multispeaker VITS candidate. Listed as the closest verified practical size below the requested 250 MB tier."
-    hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Add a dedicated VITS adapter and manually supplied assets before making it runnable."
+    language_notes: "Russian Apache-2.0 multispeaker VITS model. Model card defines speaker 0 as woman and speaker 1 as man."
+    hardware_notes: "Runs through Transformers on CPU or CUDA/MPS if configured."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-high-ru-multispeaker"
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
@@ -275,100 +160,67 @@ models:
     enabled: true
     default: false
     config:
-      load_error: "Catalog-only TTS entry is not installed. Add a VITS runtime adapter and local assets before loading."
+      model_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_high_multispeaker
+      required_files:
+        - config.json
+        - model.safetensors
+        - tokenizer_config.json
+        - vocab.json
+      speaker_map:
+        speaker-0: 0
+        speaker-1: 1
+      device: cpu
 
-  - id: bene-ges-ruslan-nemo-500mb
-    display_name: Bene Ges Ruslan NeMo Russian TTS
-    hf_repo:
-    source_url: https://huggingface.co/bene-ges/tts_ru_ipa_fastpitch_ruslan
-    license: CC BY-NC 4.0
-    size_bytes: 500000000
-    size_label: "approx. 500 MB"
-    tier: around-500mb
-    availability: noncommercial
+  - id: vosk-tts-ru-0-9-multi
+    display_name: Vosk Russian TTS 0.9 Multi
+    hf_repo: alphacep/vosk-tts-ru-multi
+    source_url: https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.9-multi.zip
+    license: Apache-2.0
+    size_bytes: 782787154
+    size_label: "747 MiB"
+    tier: around-1gb
+    availability: available
     type: text_to_audio
     capabilities:
       - text_to_audio
       - tts
     voices:
-      - id: ruslan
-        display_name: Ruslan
-        language: ru-RU
-        gender: male
-        sample_rate: 22050
-    adapter: catalog_only_tts
-    runtime: in_process
-    mode: turn_based
-    language_notes: "Russian NeMo TTS candidate for the requested around-500mb tier. Noncommercial license limits runtime use."
-    hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Confirm license fit, install NeMo runtime manually, and provide both FastPitch and HiFiGAN local assets before making it runnable."
-    supports_prompt: true
-    supports_streaming: false
-    input_sample_rate: 16000
-    output_sample_rate: 22050
-    enabled: true
-    default: false
-    config:
-      load_error: "Catalog-only TTS entry is not installed because this candidate is noncommercial and has no runtime adapter."
-
-  - id: frappuccino-vits2-ru-natasha
-    display_name: Frappuccino VITS2 Russian Natasha
-    hf_repo:
-    source_url: https://huggingface.co/frappuccino/vits2_ru_natasha
-    license: MIT
-    size_bytes: 220000000
-    size_label: "approx. 220 MB"
-    tier: around-500mb
-    availability: closest_practical_runtime_below_tier
-    type: text_to_audio
-    capabilities:
-      - text_to_audio
-      - tts
-    voices:
-      - id: natasha
-        display_name: Natasha
+      - id: F01
+        display_name: F01
         language: ru-RU
         gender: female
         sample_rate: 22050
-    adapter: catalog_only_tts
-    runtime: in_process
-    mode: turn_based
-    language_notes: "Russian VITS2 candidate below the requested 500 MB tier, retained as a practical runtime-size gap filler."
-    hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Add a VITS2 adapter and manually supplied assets before making it runnable."
-    supports_prompt: true
-    supports_streaming: false
-    input_sample_rate: 16000
-    output_sample_rate: 22050
-    enabled: true
-    default: false
-    config:
-      load_error: "Catalog-only TTS entry is not installed. Add a VITS2 runtime adapter and local assets before loading."
-
-  - id: facebook-tts-transformer-ru-cv7-css10
-    display_name: Facebook TTS Transformer Russian CV7 CSS10
-    hf_repo:
-    source_url: https://huggingface.co/facebook/tts_transformer-ru-cv7_css10
-    license: Unknown
-    size_bytes: 1024000000
-    size_label: "approx. 1 GB"
-    tier: around-1gb
-    availability: license_blocked
-    type: text_to_audio
-    capabilities:
-      - text_to_audio
-      - tts
-    voices:
-      - id: default
-        display_name: Default Russian
+        notes: "Tiflocomp Irina voice listed by Vosk model card."
+      - id: F02
+        display_name: F02
         language: ru-RU
+        gender: female
         sample_rate: 22050
-    adapter: catalog_only_tts
+        notes: "Natasha from Sova voice listed by Vosk model card."
+      - id: F03
+        display_name: F03
+        language: ru-RU
+        gender: female
+        sample_rate: 22050
+        notes: "Artificial female voice listed by Vosk model card."
+      - id: M01
+        display_name: M01
+        language: ru-RU
+        gender: male
+        sample_rate: 22050
+        notes: "Artificial male voice listed by Vosk model card."
+      - id: M02
+        display_name: M02
+        language: ru-RU
+        gender: male
+        sample_rate: 22050
+        notes: "Artificial male voice listed by Vosk model card."
+    adapter: vosk_tts
     runtime: in_process
     mode: turn_based
-    language_notes: "Russian Transformer TTS candidate for the requested around-1gb tier. Catalog-only because license status is blocked."
-    hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Do not enable runtime loading until license status and local asset handling are resolved."
+    language_notes: "Apache-2.0 multispeaker Russian Vosk TTS model with three female and two male speakers."
+    hardware_notes: "Runs through vosk-tts/onnxruntime on CPU. Download is large."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models vosk-tts-ru-0-9-multi"
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
@@ -376,41 +228,13 @@ models:
     enabled: true
     default: false
     config:
-      load_error: "Catalog-only TTS entry is license-blocked and has no runtime adapter."
-
-  - id: f5-tts-russian-voice-clone
-    display_name: F5-TTS Russian Voice Clone
-    hf_repo:
-    source_url: https://huggingface.co/Misha24-10/F5-TTS_RUSSIAN
-    license: CC BY-NC 4.0
-    size_bytes: 1000000000
-    size_label: "approx. 1 GB"
-    tier: around-1gb
-    availability: conditional_reference_voice
-    type: text_to_audio
-    capabilities:
-      - text_to_audio
-      - tts
-    voices:
-      - id: reference-voice
-        display_name: Reference Voice
-        language: ru-RU
-        sample_rate: 24000
-        notes: "Requires user-provided reference audio for voice cloning."
-    adapter: catalog_only_tts
-    runtime: in_process
-    mode: turn_based
-    language_notes: "Russian F5-TTS voice cloning candidate. Requires reference audio and remains catalog-only until runtime and consent boundaries are implemented."
-    hardware_notes: "Catalog metadata only; no runtime adapter, auto-load, or auto-download behavior is enabled."
-    install_notes: "Catalog-only candidate. Add explicit reference audio handling, local assets, and a runtime adapter before enabling load."
-    supports_prompt: true
-    supports_streaming: false
-    input_sample_rate: 16000
-    output_sample_rate: 24000
-    enabled: true
-    default: false
-    config:
-      load_error: "Catalog-only TTS entry requires reference audio support and has no runtime adapter."
+      model_path: data/models/vosk/vosk-model-tts-ru-0.9-multi
+      speaker_map:
+        F01: 0
+        F02: 1
+        F03: 2
+        M01: 3
+        M02: 4
 
   - id: synthetic-local-tts
     display_name: Synthetic Local TTS
