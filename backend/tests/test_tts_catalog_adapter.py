@@ -207,6 +207,38 @@ async def test_vosk_adapter_reports_missing_local_model_dir(tmp_path: Path) -> N
     assert "install-tts-models" in (health.detail or "")
 
 
+def test_vosk_adapter_normalizes_decomposed_cyrillic_before_synthesis(tmp_path: Path) -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("vosk-tts-ru-0-9-multi")
+    adapter = ADAPTER_REGISTRY["vosk_tts"]()
+    adapter.config = entry
+    adapter.last_health.status = "ready"
+
+    captured: dict[str, str] = {}
+
+    class FakeSynth:
+        def synth(self, text: str, oname: str, speaker_id: int = 0) -> None:
+            captured["text"] = text
+            Path(oname).write_bytes(b"RIFFfake")
+
+    adapter.synth = FakeSynth()
+    result = adapter._generate_sync(
+        AudioTurn(
+            session_id="sess_tts",
+            turn_id="turn_tts",
+            input_path=tmp_path / "ignored.txt",
+            output_path=tmp_path / "speech.wav",
+            mime_type="text/plain",
+            persona_prompt="",
+            options={"text": "проверь моделеи\u0306", "voice": "F01"},
+        )
+    )
+
+    assert result.output_path == tmp_path / "speech.wav"
+    assert "\u0306" not in captured["text"]
+    assert "моделей" in captured["text"]
+
+
 @pytest.mark.asyncio
 async def test_synthetic_tts_adapter_writes_wav_without_model_weights(tmp_path: Path) -> None:
     catalog = ModelCatalog(MODELS_DIR)

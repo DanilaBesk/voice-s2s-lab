@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+import unicodedata
 
 from app.adapters.base import AdapterError, AdapterHealth, AdapterResult, AudioTurn, SessionConfig
 from app.catalog import ModelCatalogEntry
@@ -77,7 +78,7 @@ class VoskTtsAdapter:
     def _generate_sync(self, turn: AudioTurn) -> AdapterResult:
         if self.config is None or self.synth is None:
             raise AdapterError("model_not_ready", "Vosk TTS adapter is not ready")
-        text = str(turn.options.get("text") or turn.persona_prompt or "").strip()
+        text = unicodedata.normalize("NFC", str(turn.options.get("text") or turn.persona_prompt or "")).strip()
         if not text:
             raise AdapterError("empty_tts_text", "TTS text is empty")
         voice = str(turn.options.get("voice") or self.config.voices[0].id)
