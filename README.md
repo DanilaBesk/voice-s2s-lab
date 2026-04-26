@@ -81,6 +81,33 @@ data/models/piper/ru_RU-dmitri-medium.onnx.json
 
 The backend never downloads these files automatically. See [docs/tts-research-and-evidence.md](docs/tts-research-and-evidence.md) for the researched model shortlist, license risks, install notes, and runtime evidence.
 
+## Quick Start: Russian TTS
+
+The local Piper runtime is optional and isolated behind the same catalog/adapter lifecycle as other models:
+
+```bash
+cd backend
+uv sync --extra dev --extra tts
+uv run --extra dev --extra tts uvicorn app.main:app --host 127.0.0.1 --port 18000
+```
+
+In another terminal:
+
+```bash
+cd frontend
+npm install
+VITE_API_BASE_URL=http://127.0.0.1:18000 npm run dev -- --host 127.0.0.1 --port 5174
+```
+
+Open http://127.0.0.1:5174, switch to TTS, select `Piper Russian Denis Medium`, press `Запустить модель`, enter Russian text, and press `Сгенерировать`.
+
+The current local smoke run used `ru_RU-denis-medium` from `rhasspy/piper-voices` with these SHA-256 checksums:
+
+```text
+15fab56e11a097858ee115545d0f697fc2a316c41a291a5362349fb870411b0a  data/models/piper/ru_RU-denis-medium.onnx
+831c860dac0b5073eaa81610a0a638ec23d90a6cf8e5f871b4485c2cec3767c8  data/models/piper/ru_RU-denis-medium.onnx.json
+```
+
 ## Adding A Model
 
 1. Add `backend/app/models/<model-id>.yaml`.
