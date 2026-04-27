@@ -61,92 +61,7 @@ const s2sModel = {
   default: true,
 } satisfies ModelFixture;
 
-const denisModel = {
-  id: "piper-ru-ru-denis-medium",
-  display_name: "Piper Russian Denis Medium",
-  hf_repo: null,
-  source_url: "https://huggingface.co/rhasspy/piper-voices",
-  license: "CC0 model card; Piper runtime GPL-3.0-or-later",
-  size_bytes: 63_201_294,
-  size_label: "63 MB",
-  tier: "lightweight",
-  availability: "available",
-  type: "text_to_audio",
-  capabilities: ["text_to_audio", "tts"],
-  voices: [
-    {
-      id: "ru_RU-denis-medium",
-      display_name: "Denis",
-      language: "ru-RU",
-      gender: "male",
-      sample_rate: 22050,
-      notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config.",
-    },
-  ],
-  adapter: "piper_tts",
-  runtime: "subprocess",
-  mode: "turn_based",
-  language_notes: "Russian text-to-speech voice for local Piper runtime.",
-  hardware_notes: "Runs on CPU through Piper. No GPU required.",
-  install_notes: "Install Piper separately and place ru_RU-denis-medium.onnx plus ru_RU-denis-medium.onnx.json under data/models/piper. The backend never downloads these files.",
-  supports_prompt: true,
-  supports_streaming: false,
-  input_sample_rate: 16000,
-  output_sample_rate: 22050,
-} satisfies ModelFixture;
-
-const dmitriModel = {
-  ...denisModel,
-  id: "piper-ru-ru-dmitri-medium",
-  display_name: "Piper Russian Dmitri Medium",
-  install_notes: "Install Piper separately and place ru_RU-dmitri-medium.onnx plus ru_RU-dmitri-medium.onnx.json under data/models/piper. The backend never downloads these files.",
-  voices: [
-    {
-      id: "ru_RU-dmitri-medium",
-      display_name: "Dmitri",
-      language: "ru-RU",
-      gender: "male",
-      sample_rate: 22050,
-      notes: "Russian Piper medium voice. Place .onnx and .onnx.json files in data/models or override paths in config.",
-    },
-  ],
-} satisfies ModelFixture;
-
-const vitsLowModel = {
-  ...denisModel,
-  id: "utrobin-vits-low-ru-multispeaker",
-  display_name: "Utrobin VITS Low Russian Multispeaker",
-  hf_repo: "utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
-  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
-  license: "Apache-2.0",
-  size_bytes: 60_360_313,
-  size_label: "60 MB",
-  tier: "around-100mb",
-  availability: "available",
-  voices: [
-    { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
-    { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
-  ],
-  adapter: "transformers_vits_tts",
-  runtime: "in_process",
-  install_notes: "Run scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker",
-} satisfies ModelFixture;
-
-const vitsHighModel = {
-  ...vitsLowModel,
-  id: "utrobin-vits-high-ru-multispeaker",
-  display_name: "Utrobin VITS High Russian Multispeaker",
-  hf_repo: "utrobinmv/tts_ru_free_hf_vits_high_multispeaker",
-  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_high_multispeaker",
-  size_bytes: 159_693_937,
-  size_label: "160 MB",
-  tier: "around-250mb",
-  availability: "closest_below_requested_tier",
-  install_notes: "Run scripts/install-tts-models.py --models utrobin-vits-high-ru-multispeaker",
-} satisfies ModelFixture;
-
 const voskMultiModel = {
-  ...denisModel,
   id: "vosk-tts-ru-0-9-multi",
   display_name: "Vosk Russian TTS 0.9 Multi",
   hf_repo: "alphacep/vosk-tts-ru-multi",
@@ -156,6 +71,8 @@ const voskMultiModel = {
   size_label: "747 MiB",
   tier: "around-1gb",
   availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
   voices: [
     { id: "F01", display_name: "F01", language: "ru-RU", gender: "female", sample_rate: 22050 },
     { id: "F02", display_name: "F02", language: "ru-RU", gender: "female", sample_rate: 22050 },
@@ -165,33 +82,48 @@ const voskMultiModel = {
   ],
   adapter: "vosk_tts",
   runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Apache-2.0 multispeaker Russian Vosk TTS model.",
+  hardware_notes: "Runs through vosk-tts/onnxruntime on CPU.",
   install_notes: "Run scripts/install-tts-models.py --models vosk-tts-ru-0-9-multi",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 22050,
 } satisfies ModelFixture;
 
-const runnableTtsModels = [denisModel, dmitriModel, vitsLowModel, vitsHighModel, voskMultiModel];
+const voskMulti08Model = {
+  ...voskMultiModel,
+  id: "vosk-tts-ru-0-8-multi",
+  display_name: "Vosk Russian TTS 0.8 Multi",
+  source_url: "https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.8-multi.zip",
+  size_bytes: 804_491_027,
+  size_label: "767 MiB",
+  availability: "available_obsolete",
+  install_notes: "Run scripts/install-tts-models.py --models vosk-tts-ru-0-8-multi",
+} satisfies ModelFixture;
+
+const runnableTtsModels = [voskMulti08Model, voskMultiModel];
 const models = [s2sModel, ...runnableTtsModels];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
   const api = await installTtsApiMock(page);
 
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "TTS" })).toBeVisible();
-  await page.getByRole("button", { name: "TTS" }).click();
+  await switchToTts(page);
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
   await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels].sort(compareTtsCatalogModels).map(modelOptionLabel));
   const optionTexts = await modelSelect.locator("option").allTextContents();
   expect(optionTexts).toEqual(expect.arrayContaining([
-    "63 MB · мужчина · Piper Russian Denis Medium · available",
-    "100MB · мужчина+женщина · Utrobin VITS Low Russian Multispeaker · available",
-    "250MB · мужчина+женщина · Utrobin VITS High Russian Multispeaker · closest_below_requested_tier",
+    "1GB · мужчина+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.9 Multi · available",
   ]));
   expect(optionTexts.join(" ")).not.toContain("catalog");
   expect(optionTexts.join(" ")).not.toContain("noncommercial");
   expect(optionTexts.join(" ")).not.toContain("F5-TTS");
 
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Vosk Russian TTS 0.8 Multi");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
 
   expect(api.loadCalls()).toEqual([]);
@@ -201,24 +133,18 @@ test("shows expanded catalog metadata and male female multispeaker voice choices
   await installTtsApiMock(page);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "TTS" }).click();
+  await switchToTts(page);
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
-  await modelSelect.selectOption("utrobin-vits-low-ru-multispeaker");
+  await modelSelect.selectOption("vosk-tts-ru-0-8-multi");
   const voiceSelect = page.getByRole("combobox", { name: "Голос" });
-  await expect(page.getByLabel("Метаданные модели")).toContainText("60 MB");
-  await expect(page.getByLabel("Метаданные модели")).toContainText("around-100mb");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
-  await expect(voiceSelect.locator("option")).toHaveText(["Speaker 0", "Speaker 1"]);
-  await voiceSelect.selectOption("speaker-1");
-  await expect(voiceSelect).toHaveValue("speaker-1");
-
-  await modelSelect.selectOption("utrobin-vits-high-ru-multispeaker");
-  await expect(page.getByLabel("Метаданные модели")).toContainText("around-250mb");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
-  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
-  await expect(page.getByRole("combobox", { name: "Голос" })).toHaveValue("speaker-1");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("767 MiB");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("around-1gb");
+  await expect(page.getByLabel("Голоса модели")).toContainText("F01");
+  await expect(page.getByLabel("Голоса модели")).toContainText("M02");
+  await expect(voiceSelect.locator("option")).toHaveText(["F01", "F02", "F03", "M01", "M02"]);
+  await voiceSelect.selectOption("M01");
+  await expect(voiceSelect).toHaveValue("M01");
 
   await modelSelect.selectOption("vosk-tts-ru-0-9-multi");
   await expect(page.getByLabel("Метаданные модели")).toContainText("747 MiB");
@@ -231,7 +157,7 @@ test("covers runnable TTS start generation switch unload stop and duplicate-star
   const api = await installTtsApiMock(page);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "TTS" }).click();
+  await switchToTts(page);
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
   const generateButton = page.getByRole("button", { name: /сгенерировать/i });
@@ -239,60 +165,60 @@ test("covers runnable TTS start generation switch unload stop and duplicate-star
   await expect(generateButton).toBeDisabled();
   expect(api.count("POST", "/api/tts")).toBe(0);
 
-  await modelSelect.selectOption("piper-ru-ru-dmitri-medium");
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Dmitri Medium");
+  await modelSelect.selectOption("vosk-tts-ru-0-9-multi");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Vosk Russian TTS 0.9 Multi");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
   expect(api.loadCalls()).toEqual([]);
 
   await page.getByRole("button", { name: /запустить модель/i }).click();
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Dmitri Medium");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Vosk Russian TTS 0.9 Multi");
   await expect(generateButton).toBeEnabled();
-  expect(api.count("POST", "/api/models/piper-ru-ru-dmitri-medium/load")).toBe(1);
+  expect(api.count("POST", "/api/models/vosk-tts-ru-0-9-multi/load")).toBe(1);
 
   await expect(page.getByRole("button", { name: /модель готова/i })).toBeDisabled();
-  expect(api.count("POST", "/api/models/piper-ru-ru-dmitri-medium/load")).toBe(1);
+  expect(api.count("POST", "/api/models/vosk-tts-ru-0-9-multi/load")).toBe(1);
 
-  await page.getByRole("combobox", { name: "Голос" }).selectOption("ru_RU-dmitri-medium");
+  await page.getByRole("combobox", { name: "Голос" }).selectOption("M01");
   await generateButton.click();
   await expect(page.getByText("TTS готов.")).toBeVisible();
   await expect(page.locator(".response-box")).toHaveText("Привет из e2e");
   expect(api.count("POST", "/api/tts")).toBe(1);
   expect(api.lastBody("/api/tts")).toMatchObject({
-    model_id: "piper-ru-ru-dmitri-medium",
+    model_id: "vosk-tts-ru-0-9-multi",
     text: "Привет из e2e",
-    voice: "ru_RU-dmitri-medium",
+    voice: "M01",
   });
 
-  await modelSelect.selectOption("piper-ru-ru-denis-medium");
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Dmitri Medium");
+  await modelSelect.selectOption("vosk-tts-ru-0-8-multi");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Vosk Russian TTS 0.8 Multi");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Vosk Russian TTS 0.9 Multi");
 
   await page.getByRole("button", { name: /запустить модель/i }).click();
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Denis Medium");
-  expect(api.count("DELETE", "/api/models/piper-ru-ru-dmitri-medium/load")).toBe(1);
-  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Vosk Russian TTS 0.8 Multi");
+  expect(api.count("DELETE", "/api/models/vosk-tts-ru-0-9-multi/load")).toBe(1);
+  expect(api.count("POST", "/api/models/vosk-tts-ru-0-8-multi/load")).toBe(1);
 
   await page.getByRole("button", { name: /остановить модель/i }).click();
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
   await expect(generateButton).toBeDisabled();
-  expect(api.count("DELETE", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
+  expect(api.count("DELETE", "/api/models/vosk-tts-ru-0-8-multi/load")).toBe(1);
 
   await page.reload();
-  await page.getByRole("button", { name: "TTS" }).click();
+  await switchToTts(page);
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
   await expect(page.getByText("...")).toBeVisible();
 });
 
 test("shows TTS load errors without touching a real runtime", async ({ page }) => {
-  const api = await installTtsApiMock(page, { failLoadFor: "piper-ru-ru-denis-medium" });
+  const api = await installTtsApiMock(page, { failLoadFor: "vosk-tts-ru-0-8-multi" });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "TTS" }).click();
+  await switchToTts(page);
   await page.getByRole("button", { name: /запустить модель/i }).click();
 
-  await expect(page.getByRole("alert")).toContainText("Piper runtime missing");
+  await expect(page.getByRole("alert")).toContainText("Vosk runtime missing");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
+  expect(api.count("POST", "/api/models/vosk-tts-ru-0-8-multi/load")).toBe(1);
   expect(api.count("POST", "/api/tts")).toBe(0);
 });
 
@@ -310,6 +236,20 @@ test("records that persistence coordinates are not applicable to this e2e path",
   expect(name).toBe("none");
   expect(codeHits).toEqual([]);
 });
+
+async function switchToTts(page: Page) {
+  await page.waitForFunction(() => {
+    const button = document.querySelectorAll(".mode-switch button")[1];
+    if (!button) return false;
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return true;
+  }, undefined, { timeout: 5000 }).catch(async () => {
+    throw new Error(`TTS mode controls not rendered. Body text: ${await page.locator("body").innerText()}`);
+  });
+  await expect(page.locator("#model-select")).toBeVisible({ timeout: 5000 }).catch(async () => {
+    throw new Error(`TTS mode did not render model select. URL: ${page.url()}. Body text: ${await page.locator("body").innerText()}`);
+  });
+}
 
 async function installTtsApiMock(page: Page, options: { failLoadFor?: string } = {}) {
   let runtime: RuntimeState = { model_id: null, status: "not_loaded", detail: null };
@@ -339,7 +279,7 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
     const loadMatch = url.pathname.match(/^\/api\/models\/([^/]+)\/load$/);
     if (loadMatch && method === "POST") {
       const modelId = decodeURIComponent(loadMatch[1]);
-      runtime = options.failLoadFor === modelId ? { model_id: modelId, status: "failed", detail: "Piper runtime missing" } : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
+      runtime = options.failLoadFor === modelId ? { model_id: modelId, status: "failed", detail: "Vosk runtime missing" } : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
       return fulfillJson(route, runtime);
     }
 

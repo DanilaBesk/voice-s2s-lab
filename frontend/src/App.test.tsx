@@ -31,25 +31,28 @@ const s2sModel = {
   status: "not_loaded",
 };
 
-const denisModel = {
-  id: "piper-ru-ru-denis-medium",
-  display_name: "Piper ru_RU Denis medium",
-  hf_repo: null,
-  source_url: "https://huggingface.co/rhasspy/piper-voices",
-  license: "MIT",
-  size_bytes: 63_000_000,
-  size_label: "63 MB",
-  tier: "lightweight",
+const vosk09Model = {
+  id: "vosk-tts-ru-0-9-multi",
+  display_name: "Vosk Russian TTS 0.9 Multi",
+  hf_repo: "alphacep/vosk-tts-ru-multi",
+  source_url: "https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.9-multi.zip",
+  license: "Apache-2.0",
+  size_bytes: 782_787_154,
+  size_label: "747 MiB",
+  tier: "around-1gb",
   availability: "available",
   type: "text_to_audio",
   capabilities: ["text_to_audio", "tts"],
-  voices: [{ id: "ru_RU-denis-medium", display_name: "Denis", language: "ru-RU", gender: "male", sample_rate: 22050, notes: "clear narration" }],
-  adapter: "piper_tts",
-  runtime: "subprocess",
+  voices: [
+    { id: "F01", display_name: "F01", language: "ru-RU", gender: "female", sample_rate: 22050, notes: "female" },
+    { id: "M01", display_name: "M01", language: "ru-RU", gender: "male", sample_rate: 22050, notes: null },
+  ],
+  adapter: "vosk_tts",
+  runtime: "in_process",
   mode: "turn_based",
-  language_notes: "Russian TTS",
+  language_notes: "Russian Vosk TTS",
   hardware_notes: "CPU",
-  install_notes: "Install piper",
+  install_notes: "Install Vosk",
   supports_prompt: false,
   supports_streaming: false,
   input_sample_rate: 22050,
@@ -57,30 +60,14 @@ const denisModel = {
   status: "not_loaded",
 };
 
-const dmitriModel = {
-  ...denisModel,
-  id: "piper-ru-ru-dmitri-medium",
-  display_name: "Piper ru_RU Dmitri medium",
-  voices: [{ id: "ru_RU-dmitri-medium", display_name: "Dmitri", language: "ru-RU", gender: "male", sample_rate: 22050 }],
-};
-
-const vitsLowModel = {
-  ...denisModel,
-  id: "utrobin-vits-low-ru-multispeaker",
-  display_name: "Utrobin VITS Low Russian Multispeaker",
-  hf_repo: "utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
-  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
-  license: "Apache-2.0",
-  size_bytes: 60_360_313,
-  size_label: "60 MB",
-  tier: "around-100mb",
-  availability: "available",
-  voices: [
-    { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050, notes: "woman" },
-    { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050, notes: null },
-  ],
-  adapter: "transformers_vits_tts",
-  runtime: "in_process",
+const vosk08Model = {
+  ...vosk09Model,
+  id: "vosk-tts-ru-0-8-multi",
+  display_name: "Vosk Russian TTS 0.8 Multi",
+  source_url: "https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.8-multi.zip",
+  size_bytes: 804_491_027,
+  size_label: "767 MiB",
+  availability: "available_obsolete",
 };
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -99,7 +86,7 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
 
     if (url.endsWith("/api/models") && method === "GET") {
       return jsonResponse({
-        models: [s2sModel, denisModel, dmitriModel, vitsLowModel].map((model) => ({
+        models: [s2sModel, vosk08Model, vosk09Model].map((model) => ({
           ...model,
           status: runtime.model_id === model.id ? runtime.status : "not_loaded",
           status_detail: runtime.model_id === model.id ? runtime.detail : null,
@@ -114,7 +101,7 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
     const loadMatch = url.match(/\/api\/models\/([^/]+)\/load$/);
     if (loadMatch && method === "POST") {
       const modelId = decodeURIComponent(loadMatch[1]);
-      runtime = options.loadFails ? { model_id: modelId, status: "failed", detail: "Piper runtime missing" } : { model_id: modelId, status: "ready", detail: "Loaded" };
+      runtime = options.loadFails ? { model_id: modelId, status: "failed", detail: "Vosk runtime missing" } : { model_id: modelId, status: "ready", detail: "Loaded" };
       return jsonResponse(runtime);
     }
 
@@ -177,9 +164,9 @@ describe("App", () => {
 
     expect(await screen.findByRole("button", { name: "S2S" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "TTS" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "piper-ru-ru-dmitri-medium");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "vosk-tts-ru-0-9-multi");
 
-    expect(screen.getByLabelText("Выбрана модель")).toHaveTextContent("Piper ru_RU Dmitri medium");
+    expect(screen.getByLabelText("Выбрана модель")).toHaveTextContent("Vosk Russian TTS 0.9 Multi");
     expect(screen.getByLabelText("Загруженная модель")).toHaveTextContent("-");
     expect(calls.some((call) => call.url.includes("/load"))).toBe(false);
   });
@@ -192,9 +179,9 @@ describe("App", () => {
 
     await user.click(await screen.findByRole("button", { name: "TTS" }));
 
-    expect(screen.getByRole("option", { name: /Piper ru_RU Denis medium/ })).toBeVisible();
-    expect(screen.getByRole("option", { name: /Piper ru_RU Dmitri medium/ })).toBeVisible();
-    expect(screen.getByRole("option", { name: /63 MB · мужчина · Piper ru_RU Denis medium · available/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /Vosk Russian TTS 0.8 Multi/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /Vosk Russian TTS 0.9 Multi/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /1GB · мужчина\+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete/ })).toBeVisible();
     expect(screen.queryByRole("option", { name: /готово|not_loaded|ready|failed|loading/i })).not.toBeInTheDocument();
   });
 
@@ -207,23 +194,13 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "TTS" }));
 
     expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("Источник");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("https://huggingface.co/rhasspy/piper-voices");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("MIT");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("63 MB");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("lightweight");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("available");
-    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("Denis");
-    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("ru-RU · male · 22050 Hz · clear narration");
-
-    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "utrobin-vits-low-ru-multispeaker");
-
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("utrobinmv/tts_ru_free_hf_vits_low_multispeaker");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.8-multi.zip");
     expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("Apache-2.0");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("60 MB");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("around-100mb");
-    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("available");
-    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("Speaker 0");
-    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("ru-RU · female · 22050 Hz · woman");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("767 MiB");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("around-1gb");
+    expect(screen.getByLabelText("Метаданные модели")).toHaveTextContent("available_obsolete");
+    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("F01");
+    expect(screen.getByLabelText("Голоса модели")).toHaveTextContent("ru-RU · female · 22050 Hz · female");
   });
 
   it("starts and stops models through explicit lifecycle endpoints", async () => {
@@ -235,17 +212,17 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "TTS" }));
     await user.click(screen.getByRole("button", { name: /запустить модель/i }));
 
-    expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/models/piper-ru-ru-denis-medium/load` }));
-    await waitFor(() => expect(screen.getByLabelText("Загруженная модель")).toHaveTextContent("Piper ru_RU Denis medium"));
+    expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/models/vosk-tts-ru-0-8-multi/load` }));
+    await waitFor(() => expect(screen.getByLabelText("Загруженная модель")).toHaveTextContent("Vosk Russian TTS 0.8 Multi"));
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "piper-ru-ru-dmitri-medium");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "vosk-tts-ru-0-9-multi");
     await user.click(screen.getByRole("button", { name: /запустить модель/i }));
 
-    expect(calls).toContainEqual(expect.objectContaining({ method: "DELETE", url: `${API_BASE_URL}/api/models/piper-ru-ru-denis-medium/load` }));
-    expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/models/piper-ru-ru-dmitri-medium/load` }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: "DELETE", url: `${API_BASE_URL}/api/models/vosk-tts-ru-0-8-multi/load` }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/models/vosk-tts-ru-0-9-multi/load` }));
 
     await user.click(screen.getByRole("button", { name: /остановить модель/i }));
-    expect(calls).toContainEqual(expect.objectContaining({ method: "DELETE", url: `${API_BASE_URL}/api/models/piper-ru-ru-dmitri-medium/load` }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: "DELETE", url: `${API_BASE_URL}/api/models/vosk-tts-ru-0-9-multi/load` }));
   });
 
   it("keeps TTS generation disabled until runtime is ready and surfaces unloaded errors", async () => {
@@ -273,7 +250,7 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "TTS" }));
     await user.click(screen.getByRole("button", { name: /запустить модель/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Piper runtime missing");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Vosk runtime missing");
   });
 
   it("loads the S2S model before creating a session when backend runtime is not ready", async () => {
@@ -288,6 +265,6 @@ describe("App", () => {
       expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/models/qwen2-5-omni-3b/load` }));
     });
     expect(calls.some((call) => call.url.endsWith("/api/sessions"))).toBe(false);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Piper runtime missing");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Vosk runtime missing");
   });
 });

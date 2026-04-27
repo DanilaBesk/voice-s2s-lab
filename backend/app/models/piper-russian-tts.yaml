@@ -29,7 +29,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: true
+    enabled: false
     default: false
     config:
       piper_executable: piper
@@ -67,7 +67,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: true
+    enabled: false
     default: false
     config:
       piper_executable: piper
@@ -109,7 +109,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: true
+    enabled: false
     default: false
     config:
       model_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_low_multispeaker
@@ -157,7 +157,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: true
+    enabled: false
     default: false
     config:
       model_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_high_multispeaker
@@ -229,6 +229,66 @@ models:
     default: false
     config:
       model_path: data/models/vosk/vosk-model-tts-ru-0.9-multi
+      speaker_map:
+        F01: 0
+        F02: 1
+        F03: 2
+        M01: 3
+        M02: 4
+
+  - id: vosk-tts-ru-0-8-multi
+    display_name: Vosk Russian TTS 0.8 Multi
+    hf_repo: alphacep/vosk-tts-ru-multi
+    source_url: https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.8-multi.zip
+    license: Apache-2.0
+    size_bytes: 804491027
+    size_label: "767 MiB"
+    tier: around-1gb
+    availability: available_obsolete
+    type: text_to_audio
+    capabilities:
+      - text_to_audio
+      - tts
+    voices:
+      - id: F01
+        display_name: F01
+        language: ru-RU
+        gender: female
+        sample_rate: 22050
+      - id: F02
+        display_name: F02
+        language: ru-RU
+        gender: female
+        sample_rate: 22050
+      - id: F03
+        display_name: F03
+        language: ru-RU
+        gender: female
+        sample_rate: 22050
+      - id: M01
+        display_name: M01
+        language: ru-RU
+        gender: male
+        sample_rate: 22050
+      - id: M02
+        display_name: M02
+        language: ru-RU
+        gender: male
+        sample_rate: 22050
+    adapter: vosk_tts
+    runtime: in_process
+    mode: turn_based
+    language_notes: "Older Apache-2.0 multispeaker Russian Vosk TTS model kept for quality comparison against 0.9."
+    hardware_notes: "Runs through vosk-tts/onnxruntime on CPU. Download is large."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models vosk-tts-ru-0-8-multi"
+    supports_prompt: true
+    supports_streaming: false
+    input_sample_rate: 16000
+    output_sample_rate: 22050
+    enabled: true
+    default: false
+    config:
+      model_path: data/models/vosk/vosk-model-tts-ru-0.8-multi
       speaker_map:
         F01: 0
         F02: 1

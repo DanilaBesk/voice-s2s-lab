@@ -16,32 +16,34 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.mark.asyncio
-async def test_utrobin_vits_low_real_tts_load_and_generate(tmp_path: Path) -> None:
-    entry = state.catalog.get("utrobin-vits-low-ru-multispeaker")
+@pytest.mark.parametrize("model_id", ["vosk-tts-ru-0-8-multi", "vosk-tts-ru-0-9-multi"])
+async def test_enabled_vosk_real_tts_load_and_generate_all_voices(model_id: str, tmp_path: Path) -> None:
+    entry = state.catalog.get(model_id)
     adapter = ADAPTER_REGISTRY[entry.adapter]()
 
     health = await adapter.prepare(entry)
     assert health.status == "ready", health.detail
 
-    session_id = new_id("real_tts_sess")
-    turn_id = new_id("real_tts_turn")
-    output_path = tmp_path / "utrobin-vits-low-speaker-1.wav"
+    for voice in entry.voices:
+        session_id = new_id("real_tts_sess")
+        turn_id = new_id("real_tts_turn")
+        output_path = tmp_path / f"{model_id}-{voice.id}.wav"
 
-    await adapter.start_session(SessionConfig(session_id=session_id, persona_prompt=""))
-    result = await adapter.process_audio_file_or_chunk(
-        AudioTurn(
-            session_id=session_id,
-            turn_id=turn_id,
-            input_path=tmp_path / "input.txt",
-            output_path=output_path,
-            mime_type="text/plain",
-            persona_prompt="",
-            options={"text": "привет. это проверка локальной русской озвучки.", "voice": "speaker-1"},
+        await adapter.start_session(SessionConfig(session_id=session_id, persona_prompt=""))
+        result = await adapter.process_audio_file_or_chunk(
+            AudioTurn(
+                session_id=session_id,
+                turn_id=turn_id,
+                input_path=tmp_path / "input.txt",
+                output_path=output_path,
+                mime_type="text/plain",
+                persona_prompt="",
+                options={"text": "привет. это проверка локальной русской озвучки.", "voice": voice.id},
+            )
         )
-    )
 
-    assert result.output_path == output_path
-    assert output_path.exists()
-    assert output_path.read_bytes().startswith(b"RIFF")
-    assert output_path.stat().st_size > 44
-    assert result.metrics["speaker_id"] == 1
+        assert result.output_path == output_path
+        assert output_path.exists()
+        assert output_path.read_bytes().startswith(b"RIFF")
+        assert output_path.stat().st_size > 44
+        assert result.metrics["speaker_id"] == entry.config["speaker_map"][voice.id]

@@ -61,8 +61,9 @@ def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
         public = entry.public_dict()
 
         assert entry.adapter in {"piper_tts", "transformers_vits_tts", "vosk_tts"}
-        assert entry.availability in {"available", "closest_below_requested_tier"}
-        assert entry.license in {"MIT", "Apache-2.0"}
+        assert entry.tier == "around-1gb"
+        assert entry.availability in {"available", "available_obsolete"}
+        assert entry.license == "Apache-2.0"
         assert manifest.has_model(entry.id)
         assert "Catalog-only" not in entry.install_notes
         assert entry.size_bytes is not None
@@ -101,12 +102,13 @@ def test_models_endpoint_includes_enabled_russian_tts_entries() -> None:
 
     assert response.status_code == 200
     model_ids = {model["id"] for model in response.json()["models"]}
-    assert "piper-ru-ru-denis-medium" in model_ids
-    assert "piper-ru-ru-dmitri-medium" in model_ids
+    assert "piper-ru-ru-denis-medium" not in model_ids
+    assert "piper-ru-ru-dmitri-medium" not in model_ids
     assert "piper-ru-ru-irina-medium" not in model_ids
-    assert "utrobin-vits-low-ru-multispeaker" in model_ids
-    assert "utrobin-vits-high-ru-multispeaker" in model_ids
+    assert "utrobin-vits-low-ru-multispeaker" not in model_ids
+    assert "utrobin-vits-high-ru-multispeaker" not in model_ids
     assert "vosk-tts-ru-0-9-multi" in model_ids
+    assert "vosk-tts-ru-0-8-multi" in model_ids
     assert "silero-ru-v5-5" not in model_ids
     assert "f5-tts-russian-voice-clone" not in model_ids
     assert "synthetic-local-tts" not in model_ids
@@ -120,7 +122,7 @@ def test_tts_installer_declares_selected_model_without_downloading() -> None:
             sys.executable,
             str(REPO_ROOT / "scripts" / "install-tts-models.py"),
             "--models",
-            "utrobin-vits-low-ru-multispeaker",
+            "vosk-tts-ru-0-8-multi",
             "--dry-run",
         ],
         cwd=REPO_ROOT / "backend",
@@ -130,8 +132,8 @@ def test_tts_installer_declares_selected_model_without_downloading() -> None:
     )
 
     assert result.returncode == 0
-    assert "utrobin-vits-low-ru-multispeaker" in result.stdout
-    assert "model.safetensors" in result.stdout
+    assert "vosk-tts-ru-0-8-multi" in result.stdout
+    assert "vosk-model-tts-ru-0.8-multi" in result.stdout
 
 
 @pytest.mark.asyncio

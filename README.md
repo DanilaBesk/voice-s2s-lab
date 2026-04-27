@@ -70,13 +70,11 @@ data/models
 
 For the current Qwen path, prefer `HF_HUB_CACHE=../data/models/huggingface` over `HF_HOME` so manual snapshot downloads and runtime warmup use the same cache location.
 
-TTS model weights are also kept outside git. Piper Russian voices are expected at:
+TTS model weights are also kept outside git. The currently visible quality-test TTS surface is Vosk-only, around 1GB-class:
 
 ```text
-data/models/piper/ru_RU-denis-medium.onnx
-data/models/piper/ru_RU-denis-medium.onnx.json
-data/models/piper/ru_RU-dmitri-medium.onnx
-data/models/piper/ru_RU-dmitri-medium.onnx.json
+data/models/vosk/vosk-model-tts-ru-0.9-multi
+data/models/vosk/vosk-model-tts-ru-0.8-multi
 ```
 
 Install TTS assets declaratively from the manifest instead of collecting model files by hand:
@@ -91,12 +89,12 @@ The manifest is [backend/app/tts-assets.yaml](backend/app/tts-assets.yaml). The 
 
 ## Quick Start: Russian TTS
 
-The local Piper runtime is optional and isolated behind the same catalog/adapter lifecycle as other models:
+The local TTS runtime is explicit: install declared assets first, then start the backend. The UI exposes only enabled, installable, runnable TTS entries.
 
 ```bash
 cd backend
 uv sync --extra dev --extra tts
-uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker
+uv run --extra tts python ../scripts/install-tts-models.py --all
 uv run --extra dev --extra tts uvicorn app.main:app --host 127.0.0.1 --port 18000
 ```
 
@@ -108,14 +106,7 @@ npm install
 VITE_API_BASE_URL=http://127.0.0.1:18000 npm run dev -- --host 127.0.0.1 --port 5174
 ```
 
-Open http://127.0.0.1:5174, switch to TTS, select an installed TTS model, press `Запустить модель`, enter Russian text, and press `Сгенерировать`.
-
-The current local smoke run used `ru_RU-denis-medium` from `rhasspy/piper-voices` with these SHA-256 checksums:
-
-```text
-15fab56e11a097858ee115545d0f697fc2a316c41a291a5362349fb870411b0a  data/models/piper/ru_RU-denis-medium.onnx
-831c860dac0b5073eaa81610a0a638ec23d90a6cf8e5f871b4485c2cec3767c8  data/models/piper/ru_RU-denis-medium.onnx.json
-```
+Open http://127.0.0.1:5174, switch to TTS, select an installed Vosk model, press `Запустить модель`, enter Russian text, choose a voice, and press `Сгенерировать`.
 
 ## Adding A Model
 
@@ -128,11 +119,9 @@ The frontend reads `/api/models` and should not need model-specific branching.
 ## Current Runtime Surface
 
 - `qwen2-5-omni-3b`: the only enabled real speech-to-speech target.
-- `piper-ru-ru-denis-medium`: enabled local Russian male text-to-speech target; installable through `scripts/install-tts-models.py`.
-- `piper-ru-ru-dmitri-medium`: enabled local Russian male text-to-speech target; installable through `scripts/install-tts-models.py`.
-- `utrobin-vits-low-ru-multispeaker`: enabled Apache-2.0 Russian male+female VITS target for the around-100MB request.
-- `utrobin-vits-high-ru-multispeaker`: enabled Apache-2.0 Russian male+female VITS target for the closest practical around-250MB request.
-- `vosk-tts-ru-0-9-multi`: enabled Apache-2.0 Russian male+female Vosk TTS target for the around-1GB request.
+- `vosk-tts-ru-0-9-multi`: enabled Apache-2.0 Russian male+female Vosk TTS target for the around-1GB request; current non-obsolete Vosk release.
+- `vosk-tts-ru-0-8-multi`: enabled Apache-2.0 Russian male+female Vosk TTS target for around-1GB quality comparison; Vosk marks it obsolete, so it stays clearly labeled.
+- Piper and Utrobin VITS entries remain declared but disabled after quality comparison; they are not visible in `/api/models`.
 - `synthetic-local-tts`: disabled catalog fixture for deterministic backend/frontend tests; it is not a production voice and does not use model weights.
 - `mock-audio`: disabled catalog entry kept only for backend transport unit tests; it is not exposed in the UI.
 
@@ -153,7 +142,7 @@ The active API surface includes explicit model lifecycle endpoints for both S2S 
 cd backend && uv run python -m pytest -q
 cd frontend && npm run test -- --run src && npm run build
 cd frontend && npm run test:e2e
-cd backend && uv run --extra tts python ../scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker
+cd backend && uv run --extra tts python ../scripts/install-tts-models.py --all
 cd backend && VOICE_S2S_RUN_REAL_TTS_TEST=true uv run --extra tts python -m pytest tests/test_tts_real_smoke.py -q
 cd backend && \
   HF_HUB_CACHE=../data/models/huggingface \
