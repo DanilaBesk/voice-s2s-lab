@@ -133,6 +133,39 @@ const vosk08Model = {
   availability: "available_obsolete",
 };
 
+const researchAssets = [
+  {
+    id: "qwen3-tts-0-6b-base",
+    display_name: "Qwen3-TTS-12Hz-0.6B-Base",
+    source: "huggingface",
+    source_url: "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    hf_repo: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    license: "Apache-2.0",
+    runtime_status: "download_only_no_adapter",
+    status: "downloaded",
+    status_detail: null,
+    install_dir: "data/models/research/huggingface/Qwen__Qwen3-TTS-12Hz-0.6B-Base",
+    local_size_bytes: 2_300_000_000,
+    notes: "Official Qwen3-TTS 0.6B Base.",
+    runnable: false,
+  },
+  {
+    id: "kokoro-82m",
+    display_name: "Kokoro-82M",
+    source: "huggingface",
+    source_url: "https://huggingface.co/hexgrad/Kokoro-82M",
+    hf_repo: "hexgrad/Kokoro-82M",
+    license: "Apache-2.0",
+    runtime_status: "download_only_no_adapter",
+    status: "downloaded",
+    status_detail: null,
+    install_dir: "data/models/research/huggingface/hexgrad__Kokoro-82M",
+    local_size_bytes: 339_000_000,
+    notes: "Kokoro-82M official model and voice packs.",
+    runnable: false,
+  },
+];
+
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
 }
@@ -159,6 +192,10 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
 
     if (url.endsWith("/api/runtime") && method === "GET") {
       return jsonResponse(runtime);
+    }
+
+    if (url.endsWith("/api/tts-research-assets") && method === "GET") {
+      return jsonResponse({ assets: researchAssets });
     }
 
     const loadMatch = url.match(/\/api\/models\/([^/]+)\/load$/);
@@ -251,6 +288,23 @@ describe("App", () => {
     expect(screen.getByRole("option", { name: /100MB · мужчина\+женщина · Utrobin VITS Low Russian Multispeaker · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /1GB · мужчина\+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete/ })).toBeVisible();
     expect(screen.queryByRole("option", { name: /готово|not_loaded|ready|failed|loading/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Qwen3-TTS-12Hz-0\.6B-Base/ })).not.toBeInTheDocument();
+  });
+
+  it("shows downloaded research assets outside the runnable model selector", async () => {
+    const user = userEvent.setup();
+    setupFetch();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "TTS" }));
+
+    const panel = screen.getByLabelText("Скачанные research TTS модели");
+    expect(panel).toHaveTextContent("Qwen3-TTS-12Hz-0.6B-Base");
+    expect(panel).toHaveTextContent("Kokoro-82M");
+    expect(panel).toHaveTextContent("download only no adapter");
+    expect(panel).toHaveTextContent("not runnable");
+    expect(screen.queryByRole("option", { name: /Kokoro-82M/ })).not.toBeInTheDocument();
   });
 
   it("renders expanded catalog metadata and voice details without model-specific branches", async () => {

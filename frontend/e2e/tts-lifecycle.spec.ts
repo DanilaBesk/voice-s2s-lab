@@ -167,6 +167,53 @@ const voskMulti08Model = {
 
 const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, voskMulti08Model, voskMultiModel];
 const models = [s2sModel, ...runnableTtsModels];
+const researchAssets = [
+  {
+    id: "qwen3-tts-0-6b-base",
+    display_name: "Qwen3-TTS-12Hz-0.6B-Base",
+    source: "huggingface",
+    source_url: "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    hf_repo: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    license: "Apache-2.0",
+    runtime_status: "download_only_no_adapter",
+    status: "downloaded",
+    status_detail: null,
+    install_dir: "data/models/research/huggingface/Qwen__Qwen3-TTS-12Hz-0.6B-Base",
+    local_size_bytes: 2_300_000_000,
+    notes: "Official Qwen3-TTS 0.6B Base.",
+    runnable: false,
+  },
+  {
+    id: "kokoro-82m",
+    display_name: "Kokoro-82M",
+    source: "huggingface",
+    source_url: "https://huggingface.co/hexgrad/Kokoro-82M",
+    hf_repo: "hexgrad/Kokoro-82M",
+    license: "Apache-2.0",
+    runtime_status: "download_only_no_adapter",
+    status: "downloaded",
+    status_detail: null,
+    install_dir: "data/models/research/huggingface/hexgrad__Kokoro-82M",
+    local_size_bytes: 339_000_000,
+    notes: "Kokoro-82M official model and voice packs.",
+    runnable: false,
+  },
+  {
+    id: "f5-tts-russian-mlx-4bit",
+    display_name: "f5-tts-russian-mlx",
+    source: "huggingface",
+    source_url: "https://huggingface.co/ink-splatters/f5-tts-russian-mlx",
+    hf_repo: "ink-splatters/f5-tts-russian-mlx",
+    license: "MIT",
+    runtime_status: "download_only_no_adapter",
+    status: "downloaded",
+    status_detail: null,
+    install_dir: "data/models/research/huggingface/ink-splatters__f5-tts-russian-mlx",
+    local_size_bytes: 222_000_000,
+    notes: "Russian F5-TTS MLX community weights.",
+    runnable: false,
+  },
+];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
   const api = await installTtsApiMock(page);
@@ -187,9 +234,13 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   expect(optionTexts.join(" ")).not.toContain("catalog");
   expect(optionTexts.join(" ")).not.toContain("noncommercial");
   expect(optionTexts.join(" ")).not.toContain("F5-TTS");
+  expect(optionTexts.join(" ")).not.toContain("Qwen3-TTS-12Hz-0.6B-Base");
 
   await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
+  await expect(page.getByLabel("Скачанные research TTS модели")).toContainText("Qwen3-TTS-12Hz-0.6B-Base");
+  await expect(page.getByLabel("Скачанные research TTS модели")).toContainText("Kokoro-82M");
+  await expect(page.getByLabel("Скачанные research TTS модели")).toContainText("not runnable");
 
   expect(api.loadCalls()).toEqual([]);
 });
@@ -346,6 +397,10 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
 
     if (url.pathname === "/api/runtime" && method === "GET") {
       return fulfillJson(route, runtime);
+    }
+
+    if (url.pathname === "/api/tts-research-assets" && method === "GET") {
+      return fulfillJson(route, { assets: researchAssets });
     }
 
     const loadMatch = url.pathname.match(/^\/api\/models\/([^/]+)\/load$/);

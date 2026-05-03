@@ -17,6 +17,7 @@ from app.catalog import ModelCatalog, ModelCatalogEntry
 from app.config import get_settings
 from app.events import EventLog, Timer
 from app.sessions import SessionStore, new_id
+from app.tts_research_assets import TtsResearchManifest
 
 DEFAULT_PERSONA_PROMPT = (
     "Ты Алекс, живой собеседник в голосовом звонке. Говори по-русски естественно, спокойно, "
@@ -190,6 +191,13 @@ async def list_models() -> dict:
         )
     )
     return {"models": models}
+
+
+@app.get("/api/tts-research-assets")
+async def list_tts_research_assets() -> dict:
+    assets = TtsResearchManifest.load_default().public_list()
+    assets.sort(key=lambda asset: (asset["status"] != "downloaded", asset["display_name"]))
+    return {"assets": assets}
 
 
 @app.get("/api/runtime")

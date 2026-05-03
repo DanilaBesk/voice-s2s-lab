@@ -104,6 +104,8 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all --veri
 
 The research manifest is [backend/app/tts-research-assets.yaml](backend/app/tts-research-assets.yaml). It currently declares Qwen3-TTS 0.6B Base, Kokoro-82M, F5 Russian MLX 4-bit, Silero CIS base, and RHVoice Russian assets. Qwen3-TTS 1.7B is intentionally excluded because it is too large for the current local test pass.
 
+The site shows these downloaded assets in the TTS mode under `Research models`. They are not mixed into the runnable model selector and cannot be started until a matching adapter is implemented.
+
 ## Quick Start: Russian TTS
 
 The local TTS runtime is explicit: install declared assets first, then start the backend. The UI exposes only enabled, installable, runnable TTS entries.
@@ -149,6 +151,7 @@ The editable persona prompt in the UI is for behavior testing. For Qwen audio ou
 The active API surface includes explicit model lifecycle endpoints for both S2S and TTS:
 
 - `GET /api/models`
+- `GET /api/tts-research-assets`
 - `GET /api/runtime`
 - `POST /api/models/{id}/load`
 - `DELETE /api/models/{id}/load`

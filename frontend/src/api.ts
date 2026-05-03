@@ -40,6 +40,22 @@ export type RuntimeResponse = {
   detail: string | null;
 };
 
+export type TtsResearchAsset = {
+  id: string;
+  display_name: string;
+  source: string;
+  source_url?: string | null;
+  hf_repo?: string | null;
+  license?: string | null;
+  runtime_status: string;
+  status: "downloaded" | "missing" | "incomplete" | string;
+  status_detail?: string | null;
+  install_dir: string;
+  local_size_bytes?: number | null;
+  notes: string;
+  runnable: boolean;
+};
+
 export type SessionResponse = {
   session_id: string;
   model_id: string;
@@ -73,6 +89,12 @@ export async function fetchRuntime(): Promise<RuntimeResponse> {
   const response = await fetch(`${API_BASE_URL}/api/runtime`);
   if (!response.ok) throw new Error(await responseErrorMessage(response));
   return response.json();
+}
+
+export async function fetchTtsResearchAssets(): Promise<TtsResearchAsset[]> {
+  const response = await fetch(`${API_BASE_URL}/api/tts-research-assets`);
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
+  return (await response.json()).assets;
 }
 
 export async function loadModel(modelId: string): Promise<RuntimeResponse> {

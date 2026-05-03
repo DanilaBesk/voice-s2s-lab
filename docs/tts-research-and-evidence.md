@@ -48,6 +48,8 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all --veri
 
 The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them.
 
+The UI exposes these downloaded assets through `GET /api/tts-research-assets` in a separate TTS-mode `Research models` block. This makes Qwen/Kokoro/F5/Silero/RHVoice visible on the site without presenting them as runnable catalog entries.
+
 Downloaded research assets after the 2026-05-03 interruption:
 
 | Research ID | Source | License | Local size | Runtime status |
