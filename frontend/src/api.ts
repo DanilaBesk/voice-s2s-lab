@@ -63,6 +63,13 @@ export type TurnResponse = {
 
 export type TtsResponse = Omit<TurnResponse, "session_id">;
 
+export type TtsReferenceVoice = {
+  voice_id: string;
+  display_name: string;
+  ref_audio_path: string;
+  ref_text: string;
+};
+
 export async function fetchModels(): Promise<ModelEntry[]> {
   const response = await fetch(`${API_BASE_URL}/api/models`);
   if (!response.ok) throw new Error(await responseErrorMessage(response));
@@ -115,6 +122,19 @@ export async function generateTts(modelId: string, text: string, voice?: string,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model_id: modelId, text, voice: voice || undefined, options }),
+  });
+  if (!response.ok) throw new Error(await responseErrorMessage(response));
+  return response.json();
+}
+
+export async function uploadTtsReferenceVoice(audio: File, displayName: string, refText: string): Promise<TtsReferenceVoice> {
+  const form = new FormData();
+  form.append("audio", audio, audio.name);
+  form.append("display_name", displayName || audio.name);
+  form.append("ref_text", refText);
+  const response = await fetch(`${API_BASE_URL}/api/tts/reference-voices`, {
+    method: "POST",
+    body: form,
   });
   if (!response.ok) throw new Error(await responseErrorMessage(response));
   return response.json();

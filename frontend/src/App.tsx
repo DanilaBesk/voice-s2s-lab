@@ -12,9 +12,11 @@ import {
   RuntimeResponse,
   SessionResponse,
   submitTurn,
+  TtsReferenceVoice,
   TtsResponse,
   TurnResponse,
   unloadModel,
+  uploadTtsReferenceVoice,
 } from "./api";
 import { encodePcmToWav, resampleLinear } from "./audioUtils";
 import { UtteranceVad } from "./audioVad";
@@ -58,6 +60,11 @@ export function App() {
   const [ttsText, setTtsText] = useState("");
   const [ttsVoice, setTtsVoice] = useState("");
   const [ttsStatus, setTtsStatus] = useState<TtsStatus>("idle");
+  const [qwenReferenceFile, setQwenReferenceFile] = useState<File | null>(null);
+  const [qwenReferenceName, setQwenReferenceName] = useState("");
+  const [qwenReferenceText, setQwenReferenceText] = useState("");
+  const [qwenReferenceVoice, setQwenReferenceVoice] = useState<TtsReferenceVoice | null>(null);
+  const [qwenXVectorOnly, setQwenXVectorOnly] = useState(true);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [inputLevel, setInputLevel] = useState(0);
   const [activity, setActivity] = useState("Выберите режим и модель.");
@@ -89,6 +96,7 @@ export function App() {
   const selectedModelReady = Boolean(selectedModel && runtime.model_id === selectedModel.id && runtime.status === "ready");
   const estimatedVoiceSeconds = turnOptions.talker_max_new_tokens / TALKER_TOKENS_PER_SECOND;
   const ttsReady = appMode === "tts" && Boolean(selectedModel && supportsTts(selectedModel) && selectedModelReady);
+  const qwenReferenceControlsVisible = appMode === "tts" && selectedModel?.adapter === "qwen3_tts";
   const displayedText = appMode === "tts" ? ttsTurn?.text : lastTurn?.text;
 
   useEffect(() => {
@@ -434,7 +442,8 @@ export function App() {
     setTtsStatus("generating");
     setActivity("Генерирую TTS.");
     try {
-      const turn = await generateTts(model.id, ttsText, ttsVoice, {});
+      const options = await ttsOptionsForModel(model);
+      const turn = await generateTts(model.id, ttsText, ttsVoice, options);
       setTtsTurn(turn);
       if (turn.audio_url && audioRef.current) {
         audioRef.current.src = new URL(turn.audio_url, API_BASE_URL).toString();
@@ -446,6 +455,22 @@ export function App() {
       setError(humanError(err));
       setTtsStatus("idle");
     }
+  }
+
+  async function ttsOptionsForModel(model: ModelEntry): Promise<Record<string, unknown>> {
+    if (model.adapter !== "qwen3_tts") return {};
+    let reference = qwenReferenceVoice;
+    if (qwenReferenceFile && !reference) {
+      setActivity("Загружаю референс-голос.");
+      reference = await uploadTtsReferenceVoice(qwenReferenceFile, qwenReferenceName.trim() || qwenReferenceFile.name, qwenReferenceText);
+      setQwenReferenceVoice(reference);
+    }
+    if (!reference) return {};
+    return {
+      ref_audio_path: reference.ref_audio_path,
+      ref_text: qwenReferenceText.trim() || reference.ref_text,
+      x_vector_only_mode: qwenXVectorOnly,
+    };
   }
 
   function updateThinkerTokens(value: number) {
@@ -460,6 +485,14 @@ export function App() {
       ...current,
       talker_max_new_tokens: clampInteger(value, 24, 512),
     }));
+  }
+
+  function updateQwenReferenceFile(file: File | null) {
+    setQwenReferenceFile(file);
+    setQwenReferenceVoice(null);
+    if (file && !qwenReferenceName.trim()) {
+      setQwenReferenceName(file.name.replace(/\.[^.]+$/, ""));
+    }
   }
 
   return (
@@ -611,6 +644,33 @@ export function App() {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {qwenReferenceControlsVisible && (
+                <div className="qwen-reference-controls" role="group" aria-label="Qwen reference voice">
+                  <div className="field">
+                    <label htmlFor="qwen-reference-audio">Референс-аудио</label>
+                    <input
+                      id="qwen-reference-audio"
+                      type="file"
+                      accept="audio/wav,audio/flac,audio/mpeg,audio/ogg,audio/mp4,.wav,.flac,.mp3,.ogg,.m4a"
+                      onChange={(event) => updateQwenReferenceFile(event.target.files?.[0] ?? null)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="qwen-reference-name">Название голоса</label>
+                    <input id="qwen-reference-name" value={qwenReferenceName} onChange={(event) => setQwenReferenceName(event.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="qwen-reference-text">Текст референса</label>
+                    <textarea id="qwen-reference-text" className="reference-text" value={qwenReferenceText} onChange={(event) => setQwenReferenceText(event.target.value)} />
+                  </div>
+                  <label className="checkbox-field" htmlFor="qwen-x-vector">
+                    <input id="qwen-x-vector" type="checkbox" checked={qwenXVectorOnly} onChange={(event) => setQwenXVectorOnly(event.target.checked)} />
+                    Только тембр
+                  </label>
+                  {qwenReferenceVoice && <div className="reference-status">Выбран: {qwenReferenceVoice.display_name}</div>}
                 </div>
               )}
 

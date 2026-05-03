@@ -41,6 +41,13 @@ class TtsRequest(BaseModel):
     options: dict[str, Any] = Field(default_factory=dict)
 
 
+class TtsReferenceVoiceResponse(BaseModel):
+    voice_id: str
+    display_name: str
+    ref_audio_path: str
+    ref_text: str
+
+
 class AppState:
     def __init__(self) -> None:
         self.settings = get_settings()
@@ -372,6 +379,36 @@ async def get_turn_audio(session_id: str, turn_id: str):
     if not output_path.exists():
         raise HTTPException(status_code=404, detail={"code": "audio_not_found", "message": "Output audio not found"})
     return FileResponse(output_path, media_type="audio/wav", filename=f"{turn_id}.wav")
+
+
+@app.post("/api/tts/reference-voices")
+async def upload_tts_reference_voice(
+    audio: Annotated[UploadFile, File()],
+    display_name: Annotated[str | None, Form()] = None,
+    ref_text: Annotated[str | None, Form()] = None,
+) -> TtsReferenceVoiceResponse:
+    filename = audio.filename or "reference.wav"
+    suffix = Path(filename).suffix.lower()
+    if suffix not in {".wav", ".flac", ".mp3", ".ogg", ".m4a"}:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "unsupported_reference_audio", "message": "Reference audio must be wav, flac, mp3, ogg, or m4a"},
+        )
+    body = await audio.read()
+    if not body:
+        raise HTTPException(status_code=400, detail={"code": "empty_reference_audio", "message": "Reference audio is empty"})
+
+    voice_id = new_id("ref_voice")
+    voice_dir = state.sessions.session_dir("tts") / "reference_voices" / voice_id
+    voice_dir.mkdir(parents=True, exist_ok=True)
+    audio_path = voice_dir / f"audio{suffix}"
+    audio_path.write_bytes(body)
+    return TtsReferenceVoiceResponse(
+        voice_id=voice_id,
+        display_name=(display_name or Path(filename).stem or voice_id).strip(),
+        ref_audio_path=str(audio_path),
+        ref_text=(ref_text or "").strip(),
+    )
 
 
 @app.get("/api/tts/{turn_id}/audio")

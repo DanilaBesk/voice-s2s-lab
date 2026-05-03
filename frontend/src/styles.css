@@ -291,6 +291,35 @@ label {
   overflow-wrap: anywhere;
 }
 
+.qwen-reference-controls {
+  border: 1px solid #dbe2df;
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.reference-text {
+  min-height: 84px;
+}
+
+.checkbox-field {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.checkbox-field input {
+  min-height: 0;
+  width: auto;
+}
+
+.reference-status {
+  color: #2d3b36;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .secondary-button {
   background: #eef3f1;
   border-color: #c7d0cc;

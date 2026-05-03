@@ -7,7 +7,7 @@ import { App } from "./App";
 type FetchCall = {
   url: string;
   method: string;
-  body?: string;
+  body?: BodyInit | null;
 };
 
 const s2sModel = {
@@ -254,7 +254,7 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean; initi
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
-    const body = typeof init?.body === "string" ? init.body : undefined;
+    const body = init?.body;
     calls.push({ url, method, body });
 
     if (url.endsWith("/api/models") && method === "GET") {
@@ -310,6 +310,15 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean; initi
         events: [],
         metrics: {},
         warnings: [],
+      });
+    }
+
+    if (url.endsWith("/api/tts/reference-voices") && method === "POST") {
+      return jsonResponse({
+        voice_id: "ref_voice_test",
+        display_name: "Uploaded voice",
+        ref_audio_path: ".local/sessions/tts/reference_voices/ref_voice_test/audio.wav",
+        ref_text: "Текст референса",
       });
     }
 
@@ -381,6 +390,40 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "TTS" }));
 
     expect(screen.getByRole("option", { name: /RHVoice Russian Core and Voices/ })).toBeVisible();
+  });
+
+  it("uploads a Qwen3 reference voice and sends it as voice-clone options", async () => {
+    const user = userEvent.setup();
+    const { calls } = setupFetch();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "TTS" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Модель" }), "qwen3-tts-0-6b-base");
+    expect(screen.getByRole("group", { name: "Qwen reference voice" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: /запустить модель/i }));
+    await user.upload(screen.getByLabelText("Референс-аудио"), new File(["RIFFfake"], "voice.wav", { type: "audio/wav" }));
+    await user.clear(screen.getByLabelText("Название голоса"));
+    await user.type(screen.getByLabelText("Название голоса"), "Uploaded voice");
+    await user.type(screen.getByLabelText("Текст референса"), "Текст референса");
+    await user.type(screen.getByLabelText("Текст"), "Привет");
+    await user.click(screen.getByRole("button", { name: /сгенерировать/i }));
+
+    await waitFor(() => {
+      expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/tts/reference-voices` }));
+      expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/tts` }));
+    });
+    const ttsCall = calls.find((call) => call.url === `${API_BASE_URL}/api/tts` && call.method === "POST");
+    expect(ttsCall?.body).toEqual(expect.any(String));
+    const payload = JSON.parse(String(ttsCall?.body));
+    expect(payload.model_id).toBe("qwen3-tts-0-6b-base");
+    expect(payload.voice).toBe("synthetic-reference");
+    expect(payload.options).toEqual({
+      ref_audio_path: ".local/sessions/tts/reference_voices/ref_voice_test/audio.wav",
+      ref_text: "Текст референса",
+      x_vector_only_mode: true,
+    });
   });
 
   it("restores TTS mode from an already loaded RHVoice runtime instead of opening the microphone call flow", async () => {

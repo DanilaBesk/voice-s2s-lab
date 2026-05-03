@@ -232,3 +232,31 @@ def test_tts_generation_reports_failed_runtime(monkeypatch):
 
     assert response.status_code == 502
     assert response.json()["detail"]["code"] == "model_runtime_error"
+
+
+def test_tts_reference_voice_upload_returns_adapter_options_path():
+    response = client.post(
+        "/api/tts/reference-voices",
+        files={"audio": ("sample.wav", b"RIFFfake-reference", "audio/wav")},
+        data={"display_name": "My reference", "ref_text": "Пример голоса"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["voice_id"].startswith("ref_voice_")
+    assert payload["display_name"] == "My reference"
+    assert payload["ref_text"] == "Пример голоса"
+    assert payload["ref_audio_path"].endswith("/audio.wav")
+
+    audio_path = state.sessions.session_dir("tts") / "reference_voices" / payload["voice_id"] / "audio.wav"
+    assert audio_path.read_bytes() == b"RIFFfake-reference"
+
+
+def test_tts_reference_voice_upload_rejects_unsupported_audio():
+    response = client.post(
+        "/api/tts/reference-voices",
+        files={"audio": ("sample.txt", b"not audio", "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "unsupported_reference_audio"
