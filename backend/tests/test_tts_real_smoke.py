@@ -21,6 +21,8 @@ pytestmark = pytest.mark.skipif(
     [
         "piper-ru-ru-denis-medium",
         "piper-ru-ru-dmitri-medium",
+        "f5-tts-russian-mlx-4bit",
+        "qwen3-tts-0-6b-base",
         "silero-v5-cis-base",
         "utrobin-vits-low-ru-multispeaker",
         "vosk-tts-ru-0-8-multi",
@@ -48,7 +50,7 @@ async def test_enabled_real_tts_load_and_generate_all_voices(model_id: str, tmp_
                 output_path=output_path,
                 mime_type="text/plain",
                 persona_prompt="",
-                options={"text": "привет. это проверка локальной русской озвучки.", "voice": voice.id},
+                options=_tts_options(model_id, voice.id),
             )
         )
 
@@ -61,3 +63,11 @@ async def test_enabled_real_tts_load_and_generate_all_voices(model_id: str, tmp_
                 assert result.metrics["speaker_id"] == entry.config["speaker_map"][voice.id]
             if "speaker" in result.metrics:
                 assert result.metrics["speaker"] == entry.config["speaker_map"][voice.id]
+
+
+def _tts_options(model_id: str, voice_id: str) -> dict:
+    options = {"text": "привет. это проверка локальной русской озвучки.", "voice": voice_id}
+    if model_id == "qwen3-tts-0-6b-base":
+        options["text"] = "Привет."
+        options["max_new_tokens"] = 80
+    return options

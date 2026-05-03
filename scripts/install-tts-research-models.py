@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import sys
 import tempfile
@@ -22,6 +23,7 @@ class UrlAsset:
     url: str
     path: str
     size_bytes: int | None = None
+    sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -118,6 +120,8 @@ def verify_model(model: ResearchModel) -> None:
                 raise RuntimeError(f"Missing research asset for {model.model_id}: {destination}")
             if not _valid_size(destination, asset):
                 raise RuntimeError(f"Unexpected size for {destination}: got {destination.stat().st_size}, expected {asset.size_bytes}")
+            if not _valid_sha256(destination, asset):
+                raise RuntimeError(f"Unexpected sha256 for {destination}: got {_sha256(destination)}, expected {asset.sha256}")
             print(f"    ok {destination}")
         return
     raise ValueError(f"Unsupported research model source for {model.model_id}: {model.source}")
@@ -170,10 +174,24 @@ def install_url_asset(asset: UrlAsset, install_dir: Path, *, force: bool, dry_ru
             tmp.unlink()
     if not _valid_size(destination, asset):
         raise RuntimeError(f"Unexpected size for {destination}: got {destination.stat().st_size}, expected {asset.size_bytes}")
+    if not _valid_sha256(destination, asset):
+        raise RuntimeError(f"Unexpected sha256 for {destination}: got {_sha256(destination)}, expected {asset.sha256}")
 
 
 def _valid_size(path: Path, asset: UrlAsset) -> bool:
     return asset.size_bytes is None or path.stat().st_size == asset.size_bytes
+
+
+def _valid_sha256(path: Path, asset: UrlAsset) -> bool:
+    return asset.sha256 is None or _sha256(path) == asset.sha256
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from pathlib import Path
 import subprocess
 import sys
+import wave
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,6 +27,8 @@ def test_catalog_exposes_russian_tts_entries_with_voice_metadata() -> None:
     vits_high = catalog.get("utrobin-vits-high-ru-multispeaker")
     vosk_multi = catalog.get("vosk-tts-ru-0-9-multi")
     silero = catalog.get("silero-v5-cis-base")
+    f5 = catalog.get("f5-tts-russian-mlx-4bit")
+    qwen3 = catalog.get("qwen3-tts-0-6b-base")
 
     assert denis.type == "text_to_audio"
     assert denis.capabilities == ["text_to_audio", "tts"]
@@ -55,6 +58,20 @@ def test_catalog_exposes_russian_tts_entries_with_voice_metadata() -> None:
     assert silero.adapter == "silero_tts"
     assert silero.tier == "around-100mb"
 
+    assert f5.type == "text_to_audio"
+    assert f5.adapter == "f5_mlx_tts"
+    assert f5.runtime == "in_process"
+    assert f5.tier == "around-250mb"
+    assert f5.voices[0].id == "reference-voice"
+    assert f5.voices[0].language == "ru-RU"
+
+    assert qwen3.type == "text_to_audio"
+    assert qwen3.adapter == "qwen3_tts"
+    assert qwen3.runtime == "in_process"
+    assert qwen3.tier == "around-2gb"
+    assert qwen3.voices[0].id == "synthetic-reference"
+    assert qwen3.output_sample_rate == 24000
+
 
 def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
     catalog = ModelCatalog(MODELS_DIR)
@@ -66,8 +83,8 @@ def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
     for entry in enabled_tts:
         public = entry.public_dict()
 
-        assert entry.adapter in {"piper_tts", "silero_tts", "transformers_vits_tts", "vosk_tts"}
-        assert entry.tier in {"lightweight", "around-100mb", "around-1gb"}
+        assert entry.adapter in {"f5_mlx_tts", "piper_tts", "qwen3_tts", "silero_tts", "transformers_vits_tts", "vosk_tts"}
+        assert entry.tier in {"lightweight", "around-100mb", "around-250mb", "around-1gb", "around-2gb"}
         assert entry.availability in {"available", "available_obsolete"}
         assert entry.license in {"MIT", "Apache-2.0"}
         assert manifest.has_model(entry.id)
@@ -96,10 +113,24 @@ def test_catalog_preserves_legacy_audio_schema_defaults() -> None:
 
 
 def test_adapter_registry_resolves_tts_adapters() -> None:
+    assert "f5_mlx_tts" in ADAPTER_REGISTRY
     assert "piper_tts" in ADAPTER_REGISTRY
+    assert "qwen3_tts" in ADAPTER_REGISTRY
     assert "transformers_vits_tts" in ADAPTER_REGISTRY
     assert "vosk_tts" in ADAPTER_REGISTRY
+    assert "rhvoice_tts" in ADAPTER_REGISTRY
     assert "synthetic_tts" in ADAPTER_REGISTRY
+
+
+def test_rhvoice_catalog_entry_is_disabled_until_real_runtime_smoke_passes() -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    rhvoice = catalog.get("rhvoice-russian-core-and-voices")
+
+    assert rhvoice.enabled is False
+    assert rhvoice.adapter == "rhvoice_tts"
+    assert rhvoice.availability == "blocked_runtime_missing_engine"
+    assert {voice.id: voice.gender for voice in rhvoice.voices} == {"anna": "female", "aleksandr": "male"}
+    assert "RHVoice engine" in rhvoice.hardware_notes
 
 
 def test_models_endpoint_includes_enabled_russian_tts_entries() -> None:
@@ -116,8 +147,10 @@ def test_models_endpoint_includes_enabled_russian_tts_entries() -> None:
     assert "vosk-tts-ru-0-9-multi" in model_ids
     assert "vosk-tts-ru-0-8-multi" in model_ids
     assert "silero-v5-cis-base" in model_ids
+    assert "qwen3-tts-0-6b-base" in model_ids
     assert "silero-ru-v5-5" not in model_ids
-    assert "f5-tts-russian-voice-clone" not in model_ids
+    assert "f5-tts-russian-mlx-4bit" in model_ids
+    assert "rhvoice-russian-core-and-voices" not in model_ids
     assert "synthetic-local-tts" not in model_ids
     if before_adapters is not None:
         assert app.state.adapters == before_adapters
@@ -130,6 +163,8 @@ def test_tts_installer_declares_selected_model_without_downloading() -> None:
             str(REPO_ROOT / "scripts" / "install-tts-models.py"),
             "--models",
             "utrobin-vits-low-ru-multispeaker",
+            "f5-tts-russian-mlx-4bit",
+            "qwen3-tts-0-6b-base",
             "--dry-run",
         ],
         cwd=REPO_ROOT / "backend",
@@ -140,7 +175,11 @@ def test_tts_installer_declares_selected_model_without_downloading() -> None:
 
     assert result.returncode == 0
     assert "utrobin-vits-low-ru-multispeaker" in result.stdout
+    assert "f5-tts-russian-mlx-4bit" in result.stdout
+    assert "qwen3-tts-0-6b-base" in result.stdout
     assert "model.safetensors" in result.stdout
+    assert "model_4b.safetensors" in result.stdout
+    assert "speech_tokenizer/model.safetensors" in result.stdout
 
 
 @pytest.mark.asyncio
@@ -214,6 +253,75 @@ async def test_vosk_adapter_reports_missing_local_model_dir(tmp_path: Path) -> N
 
     assert health.status == "not_installed"
     assert "install-tts-models" in (health.detail or "")
+
+
+@pytest.mark.asyncio
+async def test_f5_mlx_adapter_reports_missing_local_snapshot(tmp_path: Path) -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("f5-tts-russian-mlx-4bit").model_copy(
+        deep=True,
+        update={
+            "config": {
+                "model_dir": str(tmp_path / "missing-f5"),
+                "vocoder_model_dir": str(tmp_path / "missing-vocos"),
+                "model_file": "model_4b.safetensors",
+                "required_files": ["model_4b.safetensors", "vocab.txt"],
+            }
+        },
+    )
+
+    adapter = ADAPTER_REGISTRY["f5_mlx_tts"]()
+    health = await adapter.prepare(entry)
+
+    assert health.status == "not_installed"
+    assert "install-tts-models" in (health.detail or "")
+
+
+@pytest.mark.asyncio
+async def test_rhvoice_adapter_reports_missing_native_engine_or_wrapper() -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("rhvoice-russian-core-and-voices")
+
+    adapter = ADAPTER_REGISTRY["rhvoice_tts"]()
+    health = await adapter.prepare(entry)
+
+    assert health.status == "not_installed"
+    assert "rhvoice" in (health.detail or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_rhvoice_adapter_generation_path_writes_wav_with_loaded_runtime(tmp_path: Path) -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("rhvoice-russian-core-and-voices")
+    adapter = ADAPTER_REGISTRY["rhvoice_tts"]()
+
+    class FakeTts:
+        def to_file(self, filename: str, text: str, voice: str | None = None, format_: str | None = None, sets: dict | None = None) -> None:
+            with wave.open(filename, "wb") as handle:
+                handle.setnchannels(1)
+                handle.setsampwidth(2)
+                handle.setframerate(24_000)
+                handle.writeframes(b"\x00\x00" * 32)
+
+    adapter.config = entry
+    adapter.tts = FakeTts()
+    adapter.last_health.status = "ready"
+
+    result = await adapter.process_audio_file_or_chunk(
+        AudioTurn(
+            session_id="sess_tts",
+            turn_id="turn_tts",
+            input_path=tmp_path / "ignored.txt",
+            output_path=tmp_path / "speech.wav",
+            mime_type="text/plain",
+            persona_prompt="",
+            options={"text": "Привет", "voice": "anna"},
+        )
+    )
+
+    assert result.output_path == tmp_path / "speech.wav"
+    assert result.output_path.read_bytes().startswith(b"RIFF")
+    assert result.metrics["voice"] == "anna"
 
 
 def test_vosk_adapter_normalizes_decomposed_cyrillic_before_synthesis(tmp_path: Path) -> None:

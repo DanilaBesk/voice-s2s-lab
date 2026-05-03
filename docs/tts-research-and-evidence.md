@@ -46,17 +46,17 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all
 uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify
 ```
 
-The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them. Silero CIS now has a real adapter and moved out of research into the runnable catalog.
+The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them. Silero CIS, F5 Russian MLX 4-bit, and Qwen3-TTS 0.6B Base now have real adapters and moved out of research into the runnable catalog.
 
 Downloaded research assets after the 2026-05-03 interruption:
 
 | Research ID | Source | License | Local size | Runtime status |
 | --- | --- | --- | --- | --- |
-| `qwen3-tts-0-6b-base` | `Qwen/Qwen3-TTS-12Hz-0.6B-Base` | Apache-2.0 | 2.3G | download-only, no adapter |
-| `f5-tts-russian-mlx-4bit` | `ink-splatters/f5-tts-russian-mlx` | MIT | 222M | download-only, no adapter |
-| `rhvoice-russian-core-and-voices` | RHVoice GitHub source zips | GPL-2.0 / voice-specific | 14M | download-only, no adapter |
+| `rhvoice-russian-core-and-voices` | RHVoice GitHub source zips | GPL-2.0 / voice-specific | 14M | disabled adapter, native engine missing |
 
-`qwen3-tts-1-7b-base` / `Qwen/Qwen3-TTS-12Hz-1.7B-Base` is intentionally excluded and its partial local snapshot was removed by user request because it is too large for this pass. Only the smaller 0.6B Qwen3-TTS candidate remains declared.
+RHVoice has a guarded `rhvoice_tts` adapter and disabled catalog metadata for Anna/Aleksandr, but it is intentionally excluded from `/api/models`. Local evidence on 2026-05-03 found only the downloaded Russian language/voice zip assets under `data/models/research/rhvoice`; no `RHVoice-test`, `rhvoice-client`, or `RHVoice` executable was on `PATH`, and `rhvoice-wrapper==0.8.0` failed to initialize because `libRHVoice.dylib` was not available. Keep RHVoice disabled until a real native-engine load and WAV generation smoke passes.
+
+`qwen3-tts-1-7b-base` / `Qwen/Qwen3-TTS-12Hz-1.7B-Base` is intentionally excluded and its partial local snapshot was removed by user request because it is too large for this pass. The smaller 0.6B Qwen3-TTS candidate is now declared in the normal install manifest and exposed only through the real `qwen3_tts` adapter.
 
 ## Enabled Models
 
@@ -65,11 +65,13 @@ Downloaded research assets after the 2026-05-03 interruption:
 | `piper-ru-ru-denis-medium` | small, 63 MB | Denis, male | MIT repo; dataset CC0 | `piper_tts` subprocess, ONNX + JSON |
 | `piper-ru-ru-dmitri-medium` | small, 63 MB | Dmitri, male | MIT repo; dataset CC0 | `piper_tts` subprocess, ONNX + JSON |
 | `utrobin-vits-low-ru-multispeaker` | small, 60 MB | speaker 0 female, speaker 1 male | Apache-2.0 | `transformers_vits_tts` |
+| `f5-tts-russian-mlx-4bit` | 222 MiB weights + Vocos vocoder | reference voice | MIT | `f5_mlx_tts` / MLX on Apple Silicon |
+| `qwen3-tts-0-6b-base` | 2.3 GiB snapshot | synthetic reference voice | Apache-2.0 | `qwen3_tts` / qwen-tts voice-clone generation |
 | `silero-v5-cis-base` | small, 92 MB | multiple `ru_*` male/female voices | MIT | `silero_tts` / torch.package |
 | `vosk-tts-ru-0-9-multi` | around 1GB request, 747 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
 | `vosk-tts-ru-0-8-multi` | around 1GB request, 767 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
 
-The visible TTS catalog includes the small Russian-specialized models requested for comparison plus the existing 1GB Vosk quality baseline. Every enabled entry is declared in `backend/app/tts-assets.yaml` and must load before generation.
+The visible TTS catalog includes small Russian-specialized models, the F5/Qwen3 reference-voice candidates that passed real adapter smokes, and the existing 1GB Vosk quality baseline. Every enabled entry is declared in `backend/app/tts-assets.yaml` and must load before generation.
 
 There is no strict enabled 500MB Russian male+female model in the current catalog. The researched 500MB-class candidates either have noncommercial licensing, incomplete runtime boundaries, or only one gender. They are documented as exclusions rather than exposed as fake runtime entries.
 
@@ -139,6 +141,14 @@ Evidence recorded on 2026-05-03:
 
 | Command | Evidence |
 | --- | --- |
+| `cd backend && uv run --extra tts --with qwen-tts --with torchaudio==2.6.0 python - <<'PY' ... Qwen3TTSModel.from_pretrained(local_snapshot) ... generate_voice_clone(... max_new_tokens=80) ... PY` | Resolved the prior Qwen3 blocker: `qwen-tts==0.1.1` imports when `torchaudio==2.6.0` is pinned with `torch==2.6.0`; local Qwen3-TTS 0.6B snapshot loaded on CPU and generated `/tmp/qwen3-test.wav` with RIFF bytes. |
+| `cd backend && uv run python -m pytest tests/test_tts_catalog_adapter.py tests/test_tts_research_assets.py -q` | 20 passed. Covers Qwen3 catalog visibility, adapter registration, normal install manifest declaration, and removal from download-only research manifest. |
+| `cd backend && VOICE_S2S_RUN_REAL_TTS_TEST=true uv run --extra tts python -m pytest tests/test_tts_real_smoke.py -q -k qwen3` | 1 passed, 7 deselected. Real `qwen3_tts` adapter load and WAV generation passed against `qwen3-tts-0-6b-base`; warnings were only Python 3.13 deprecations from `audioread`. |
+| `cd backend && uv run python -m pytest -q` | 36 passed, 9 skipped after Qwen3 adapter/catalog changes. |
+| `cd frontend && npm test -- --run` | 14 passed after Qwen3 was added to the TTS catalog fixture. |
+| `cd frontend && npm run test:e2e` | 5 passed after Qwen3 was added to the TTS dropdown e2e fixture and tier labels. |
+| `cd backend && uv run --extra f5-mlx python ../scripts/install-tts-models.py --models f5-tts-russian-mlx-4bit` | Confirmed local F5 MLX weights were present and installed the required `lucasnewman/vocos-mel-24khz` Vocos files under `data/models/huggingface/lucasnewman__vocos-mel-24khz`. |
+| `cd backend && uv run --extra f5-mlx --extra dev python - <<'PY' ... ADAPTER_REGISTRY['f5_mlx_tts'] ... process_audio_file_or_chunk(... 'привет' ...) ... PY` | F5 adapter loaded `ink-splatters__f5-tts-russian-mlx`, generated `.local/f5-smoke.wav`, and the output started with RIFF bytes. Smoke used `duration_s=1.2`, `steps=1`, and the package reference audio; production callers can pass `ref_audio_path` and `ref_text`. |
 | `uv run --with huggingface-hub ... list_models(... pipeline_tag="text-to-speech" ...)` | Rechecked small Russian TTS candidates by recency/popularity/license tags. Selected Piper Denis/Dmitri and Utrobin VITS Low because they are Russian-specialized, small, available through existing runtime adapters, and permissively usable. |
 | `cd backend && uv run --extra tts python ../scripts/install-tts-models.py --all` | Confirmed all declared assets are present: Piper Denis, Piper Dmitri, Utrobin VITS Low, Vosk 0.9, and Vosk 0.8. |
 | `cd backend && uv run python -m pytest -q` | 30 passed, 6 skipped. Includes research manifest coverage and Qwen3 1.7B exclusion guard. |
@@ -150,7 +160,7 @@ Evidence recorded on 2026-05-03:
 | Browser check at `http://127.0.0.1:5174/` | TTS dropdown showed `63 MB` Piper Denis/Dmitri, `100MB` Utrobin VITS Low, and both `1GB` Vosk models. |
 | `ps -axo pid,command | rg 'Qwen3-TTS-12Hz-1.7B\|snapshot_download\|install-tts-research-models\|huggingface'` | Confirmed no Qwen3 1.7B or Hugging Face snapshot download process remained after interruption. |
 | `test ! -e data/models/research/huggingface/Qwen__Qwen3-TTS-12Hz-1.7B-Base && echo missing` | Confirmed the Qwen3 1.7B local snapshot directory was removed. |
-| `cd backend && uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify` | Confirmed the remaining download-only research assets are present and complete: Qwen3 0.6B, F5 Russian MLX 4-bit, and RHVoice. Silero moved to the normal install manifest. |
+| `cd backend && uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify` | Earlier pass confirmed Qwen3 0.6B, F5 Russian MLX 4-bit, and RHVoice research downloads. F5 has since moved to the normal install manifest after the MLX adapter smoke passed. |
 | `find data/models/research -maxdepth 4 \( -name '*.incomplete' -o -name '*.lock' \) -print` | No incomplete or lock files found under downloaded research assets. |
 | `du -sh data/models/research/...` | Confirmed local research sizes before Russian-only cleanup: Qwen3 0.6B `2.3G`, Kokoro `339M`, F5 MLX `222M`, Silero `175M`, RHVoice `14M`. Kokoro was then removed as non-Russian. |
 | `cd backend && uv run python -m pytest -q` | 32 passed, 7 skipped. Covers runnable catalog loading, research-only exclusions, missing asset diagnostics, adapter registration, and the removed research endpoint returning 404. |
@@ -158,3 +168,6 @@ Evidence recorded on 2026-05-03:
 | `curl http://127.0.0.1:18001/api/models` | TTS models returned through the normal runtime catalog: Piper Denis, Piper Dmitri, Silero CIS, Utrobin VITS Low, Vosk 0.8, and Vosk 0.9. |
 | `curl http://127.0.0.1:18001/api/tts-research-assets` | Returned 404. Downloaded research assets are no longer exposed through an application endpoint or UI block. |
 | Browser check at `http://127.0.0.1:5174/` | The TTS dropdown showed Piper Denis, Piper Dmitri, Silero CIS, Utrobin VITS Low, Vosk 0.8, and Vosk 0.9. No downloaded/research block was visible. Silero loaded from the normal selector, generated Russian text with `ru_alexandr`, and the audio endpoint returned RIFF/WAVE bytes. |
+| `which RHVoice-test; which rhvoice-client; which RHVoice` | No native RHVoice command-line runtime was installed locally. |
+| `cd backend && uv run --with rhvoice-wrapper==0.8.0 python - <<'PY' ... TTS(threads=1) ... PY` | The Python wrapper installed, but initialization failed with missing `libRHVoice.dylib`; RHVoice therefore remains disabled and absent from `/api/models`. |
+| `unzip -l data/models/research/rhvoice/RHVoice-*.zip` | Confirmed the local RHVoice download contains Russian language FST files and Anna/Aleksandr voice data, not a runnable native engine. |

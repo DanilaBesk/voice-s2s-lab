@@ -1,44 +1,20 @@
 models:
-  - id: qwen3-tts-0-6b-base
-    install_dir: data/models/research/huggingface/Qwen__Qwen3-TTS-12Hz-0.6B-Base
-    source: huggingface
-    hf_repo: Qwen/Qwen3-TTS-12Hz-0.6B-Base
-    license: Apache-2.0
-    runtime_status: download_only_no_adapter
-    notes: "Official Qwen3-TTS 0.6B Base. Large modern voice-clone/design candidate; no project runtime adapter yet."
-    allow_patterns:
-      - README.md
-      - config.json
-      - generation_config.json
-      - merges.txt
-      - model.safetensors
-      - preprocessor_config.json
-      - speech_tokenizer/*
-      - tokenizer_config.json
-      - vocab.json
-
-  - id: f5-tts-russian-mlx-4bit
-    install_dir: data/models/research/huggingface/ink-splatters__f5-tts-russian-mlx
-    source: huggingface
-    hf_repo: ink-splatters/f5-tts-russian-mlx
-    license: MIT
-    runtime_status: download_only_no_adapter
-    notes: "Russian F5-TTS MLX community weights. Downloaded as permissive research asset; the project has no F5/MLX runtime adapter yet."
-    allow_patterns:
-      - README.md
-      - model_4b.safetensors
-      - vocab.txt
-
   - id: rhvoice-russian-core-and-voices
     install_dir: data/models/research/rhvoice
     source: url
     license: GPL-2.0/voice-specific licenses
-    runtime_status: download_only_no_adapter
-    notes: "RHVoice Russian language and two Russian voice repositories. Source/voice assets only; no project runtime adapter yet."
+    runtime_status: blocked_runtime_missing_engine
+    notes: "RHVoice Russian language and two Russian voice repositories. A guarded rhvoice_tts adapter exists, but the local machine has no native RHVoice engine library, so this remains disabled and excluded from /api/models until load/generate smoke passes."
     assets:
       - url: https://github.com/RHVoice/Russian/archive/refs/heads/main.zip
         path: RHVoice-Russian-main.zip
+        size_bytes: 1587916
+        sha256: 9b1d0886ed0da18cd99b2e3613442b594accad7801ee20413551dcbf57dee3f3
       - url: https://github.com/RHVoice/anna-rus/archive/refs/heads/main.zip
         path: RHVoice-anna-rus-main.zip
+        size_bytes: 6247895
+        sha256: e5c9ef13770ad048ccd74ec9bcb9236b7e7e8a7920e5007fbf567de433b9bfad
       - url: https://github.com/RHVoice/aleksandr-rus/archive/refs/heads/main.zip
         path: RHVoice-aleksandr-rus-main.zip
+        size_bytes: 7097518
+        sha256: c1922b54b08809bde4624671ba219807650968a535e32767d61f95680602e92b

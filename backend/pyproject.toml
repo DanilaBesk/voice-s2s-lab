@@ -29,18 +29,24 @@ qwen = [
   "accelerate>=0.26.0",
   "qwen-omni-utils==0.0.9",
   "torch>=2.1,<2.7",
+  "torchaudio==2.6.0",
   "torchvision>=0.21,<0.22",
-  "transformers==4.52.3",
+  "transformers>=4.52.3,<=4.57.3",
 ]
 tts = [
   "piper-tts==1.4.2",
   "huggingface-hub>=0.34.0",
   "numpy>=1.26",
+  "qwen-tts==0.1.1",
   "scipy>=1.12",
   "soundfile==0.13.1",
   "torch>=2.1,<2.7",
-  "transformers==4.52.3",
+  "torchaudio==2.6.0",
+  "transformers==4.57.3",
   "vosk-tts==0.3.61",
+]
+f5-mlx = [
+  "f5-tts-mlx==0.2.6",
 ]
 
 [tool.pytest.ini_options]

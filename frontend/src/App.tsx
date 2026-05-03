@@ -713,6 +713,7 @@ function tierRank(model: CatalogModelMetadata): number {
   if (tier === "around-250mb") return 2;
   if (tier === "around-500mb") return 3;
   if (tier === "around-1gb") return 4;
+  if (tier === "around-2gb") return 5;
   return 10;
 }
 
@@ -729,6 +730,7 @@ function tierLabel(model: CatalogModelMetadata): string | null {
   if (model.tier === "around-250mb") return "250MB";
   if (model.tier === "around-500mb") return "500MB";
   if (model.tier === "around-1gb") return "1GB";
+  if (model.tier === "around-2gb") return "2GB";
   return model.size_label ?? model.tier ?? formatBytes(model.size_bytes);
 }
 

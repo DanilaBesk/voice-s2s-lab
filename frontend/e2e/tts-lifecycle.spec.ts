@@ -193,7 +193,57 @@ const sileroModel = {
   output_sample_rate: 24000,
 } satisfies ModelFixture;
 
-const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, sileroModel, voskMulti08Model, voskMultiModel];
+const f5MlxModel = {
+  id: "f5-tts-russian-mlx-4bit",
+  display_name: "F5 Russian MLX 4-bit",
+  hf_repo: "ink-splatters/f5-tts-russian-mlx",
+  source_url: "https://huggingface.co/ink-splatters/f5-tts-russian-mlx",
+  license: "MIT",
+  size_bytes: 232_491_451,
+  size_label: "222 MiB",
+  tier: "around-250mb",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [{ id: "reference-voice", display_name: "Reference voice", language: "ru-RU", gender: null, sample_rate: 24000, notes: "Uses configured reference audio/text" }],
+  adapter: "f5_mlx_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "MIT Russian F5-TTS MLX community weights.",
+  hardware_notes: "Requires Apple Silicon MLX runtime.",
+  install_notes: "Run scripts/install-tts-models.py --models f5-tts-russian-mlx-4bit",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 24000,
+  output_sample_rate: 24000,
+} satisfies ModelFixture;
+
+const qwen3TtsModel = {
+  id: "qwen3-tts-0-6b-base",
+  display_name: "Qwen3-TTS 0.6B Base",
+  hf_repo: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+  source_url: "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+  license: "Apache-2.0",
+  size_bytes: 2_512_484_532,
+  size_label: "2.3 GiB",
+  tier: "around-2gb",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [{ id: "synthetic-reference", display_name: "Synthetic Reference", language: "ru-RU", gender: "neutral", sample_rate: 24000 }],
+  adapter: "qwen3_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Apache-2.0 Qwen3-TTS Base model with Russian listed in the model card language set.",
+  hardware_notes: "CPU smoke is runnable for short utterances.",
+  install_notes: "Run scripts/install-tts-models.py --models qwen3-tts-0-6b-base",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 24000,
+} satisfies ModelFixture;
+
+const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, f5MlxModel, sileroModel, voskMulti08Model, voskMultiModel, qwen3TtsModel];
 const models = [s2sModel, ...runnableTtsModels];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
@@ -210,13 +260,16 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
     "63 MB · мужчина · Piper Russian Dmitri Medium · available",
     "100MB · мужчина+женщина · Silero V5 CIS Russian Base · available",
     "100MB · мужчина+женщина · Utrobin VITS Low Russian Multispeaker · available",
+    "250MB · референс-голос · F5 Russian MLX 4-bit · available",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.9 Multi · available",
+    "2GB · референс-голос · Qwen3-TTS 0.6B Base · available",
   ]));
   expect(optionTexts.join(" ")).not.toContain("catalog");
   expect(optionTexts.join(" ")).not.toContain("noncommercial");
-  expect(optionTexts.join(" ")).not.toContain("F5-TTS");
-  expect(optionTexts.join(" ")).not.toContain("Qwen3-TTS-12Hz-0.6B-Base");
+  expect(optionTexts.join(" ")).toContain("F5 Russian MLX 4-bit");
+  expect(optionTexts.join(" ")).toContain("Qwen3-TTS 0.6B Base");
+  expect(optionTexts.join(" ")).not.toContain("RHVoice Russian Core and Voices");
 
   await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
@@ -237,6 +290,12 @@ test("shows expanded catalog metadata and male female multispeaker voice choices
   await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
   await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
   await expect(page.getByRole("combobox", { name: "Голос" }).locator("option")).toHaveText(["Speaker 0", "Speaker 1"]);
+
+  await modelSelect.selectOption("f5-tts-russian-mlx-4bit");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("222 MiB");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("around-250mb");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Reference voice");
+  await expect(page.getByRole("combobox", { name: "Голос" }).locator("option")).toHaveText(["Reference voice"]);
 
   await modelSelect.selectOption("vosk-tts-ru-0-8-multi");
   const voiceSelect = page.getByRole("combobox", { name: "Голос" });
@@ -438,6 +497,7 @@ function tierRank(model: ModelFixture): number {
   if (model.tier === "around-250mb") return 2;
   if (model.tier === "around-500mb") return 3;
   if (model.tier === "around-1gb") return 4;
+  if (model.tier === "around-2gb") return 5;
   return 10;
 }
 
@@ -454,6 +514,7 @@ function tierLabel(model: ModelFixture): string | null {
   if (model.tier === "around-250mb") return "250MB";
   if (model.tier === "around-500mb") return "500MB";
   if (model.tier === "around-1gb") return "1GB";
+  if (model.tier === "around-2gb") return "2GB";
   return model.size_label ?? model.tier ?? null;
 }
 

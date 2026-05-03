@@ -162,6 +162,58 @@ const sileroModel = {
   status: "not_loaded",
 };
 
+const f5MlxModel = {
+  id: "f5-tts-russian-mlx-4bit",
+  display_name: "F5 Russian MLX 4-bit",
+  hf_repo: "ink-splatters/f5-tts-russian-mlx",
+  source_url: "https://huggingface.co/ink-splatters/f5-tts-russian-mlx",
+  license: "MIT",
+  size_bytes: 232_491_451,
+  size_label: "222 MiB",
+  tier: "around-250mb",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [{ id: "reference-voice", display_name: "Reference voice", language: "ru-RU", gender: null, sample_rate: 24000, notes: "Uses configured reference audio/text" }],
+  adapter: "f5_mlx_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Russian F5-TTS MLX adapter",
+  hardware_notes: "Apple Silicon MLX",
+  install_notes: "Install F5 MLX",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 24000,
+  output_sample_rate: 24000,
+  status: "not_loaded",
+};
+
+const qwen3TtsModel = {
+  id: "qwen3-tts-0-6b-base",
+  display_name: "Qwen3-TTS 0.6B Base",
+  hf_repo: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+  source_url: "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+  license: "Apache-2.0",
+  size_bytes: 2_512_484_532,
+  size_label: "2.3 GiB",
+  tier: "around-2gb",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [{ id: "synthetic-reference", display_name: "Synthetic Reference", language: "ru-RU", gender: "neutral", sample_rate: 24000, notes: "Deterministic local reference" }],
+  adapter: "qwen3_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Russian-capable Qwen3-TTS Base",
+  hardware_notes: "CPU smoke runnable",
+  install_notes: "Install Qwen3",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 24000,
+  status: "not_loaded",
+};
+
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
 }
@@ -178,7 +230,7 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
 
     if (url.endsWith("/api/models") && method === "GET") {
       return jsonResponse({
-        models: [s2sModel, piperDenisModel, piperDmitriModel, vitsLowModel, sileroModel, vosk08Model, vosk09Model].map((model) => ({
+        models: [s2sModel, piperDenisModel, piperDmitriModel, vitsLowModel, f5MlxModel, qwen3TtsModel, sileroModel, vosk08Model, vosk09Model].map((model) => ({
           ...model,
           status: runtime.model_id === model.id ? runtime.status : "not_loaded",
           status_detail: runtime.model_id === model.id ? runtime.detail : null,
@@ -274,15 +326,30 @@ describe("App", () => {
     expect(screen.getByRole("option", { name: /Piper Russian Denis Medium/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Piper Russian Dmitri Medium/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Utrobin VITS Low Russian Multispeaker/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /F5 Russian MLX 4-bit/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /Qwen3-TTS 0\.6B Base/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Silero V5 CIS Russian Base/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Vosk Russian TTS 0.8 Multi/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Vosk Russian TTS 0.9 Multi/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /63 MB · мужчина · Piper Russian Denis Medium · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /100MB · мужчина\+женщина · Utrobin VITS Low Russian Multispeaker · available/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /250MB · референс-голос · F5 Russian MLX 4-bit · available/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /2GB · референс-голос · Qwen3-TTS 0\.6B Base · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /100MB · мужчина\+женщина · Silero V5 CIS Russian Base · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /1GB · мужчина\+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete/ })).toBeVisible();
     expect(screen.queryByRole("option", { name: /готово|not_loaded|ready|failed|loading/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Qwen3-TTS-12Hz-0\.6B-Base/ })).not.toBeInTheDocument();
+  });
+
+  it("does not render disabled RHVoice research assets as selectable TTS models", async () => {
+    const user = userEvent.setup();
+    setupFetch();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "TTS" }));
+
+    expect(screen.queryByRole("option", { name: /RHVoice Russian Core and Voices/ })).not.toBeInTheDocument();
   });
 
   it("renders expanded catalog metadata and voice details without model-specific branches", async () => {
