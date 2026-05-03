@@ -5,7 +5,6 @@ import {
   createSession,
   fetchModels,
   fetchRuntime,
-  fetchTtsResearchAssets,
   generateTts,
   interruptSession,
   loadModel,
@@ -13,7 +12,6 @@ import {
   RuntimeResponse,
   SessionResponse,
   submitTurn,
-  TtsResearchAsset,
   TtsResponse,
   TurnResponse,
   unloadModel,
@@ -49,7 +47,6 @@ const EMPTY_RUNTIME: RuntimeResponse = { model_id: null, status: "not_loaded", d
 export function App() {
   const [appMode, setAppMode] = useState<AppMode>("s2s");
   const [models, setModels] = useState<ModelEntry[]>([]);
-  const [researchAssets, setResearchAssets] = useState<TtsResearchAsset[]>([]);
   const [runtime, setRuntime] = useState<RuntimeResponse>(EMPTY_RUNTIME);
   const [selectedModelId, setSelectedModelId] = useState("");
   const [modelBusy, setModelBusy] = useState(false);
@@ -124,10 +121,9 @@ export function App() {
 
     async function loadSystem() {
       try {
-        const [loadedModels, nextRuntime, loadedResearchAssets] = await Promise.all([fetchModels(), fetchRuntime(), fetchTtsResearchAssets()]);
+        const [loadedModels, nextRuntime] = await Promise.all([fetchModels(), fetchRuntime()]);
         if (cancelled) return;
         setModels(loadedModels);
-        setResearchAssets(loadedResearchAssets);
         setRuntime(nextRuntime);
         runtimeRef.current = nextRuntime;
         if (loadedModels.some((model) => model.status === "loading" || model.status === "not_checked") || nextRuntime.status === "loading") {
@@ -149,9 +145,8 @@ export function App() {
   }, []);
 
   async function refreshSystem() {
-    const [loadedModels, nextRuntime, loadedResearchAssets] = await Promise.all([fetchModels(), fetchRuntime(), fetchTtsResearchAssets()]);
+    const [loadedModels, nextRuntime] = await Promise.all([fetchModels(), fetchRuntime()]);
     setModels(loadedModels);
-    setResearchAssets(loadedResearchAssets);
     setRuntime(nextRuntime);
     runtimeRef.current = nextRuntime;
   }
@@ -623,25 +618,6 @@ export function App() {
             </div>
           )}
 
-          {appMode === "tts" && researchAssets.length > 0 && (
-            <section className="research-assets" aria-label="Скачанные research TTS модели">
-              <div className="research-assets-heading">
-                <h2>Research models</h2>
-                <span>{researchAssets.length}</span>
-              </div>
-              <div className="research-assets-list">
-                {researchAssets.map((asset) => (
-                  <article className="research-asset-row" key={asset.id}>
-                    <div>
-                      <strong>{asset.display_name}</strong>
-                      <span>{researchAssetSubline(asset)}</span>
-                    </div>
-                    <StatusPill status={asset.status} />
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
         </aside>
 
         <section className="panel runtime-panel">
@@ -767,17 +743,6 @@ function voiceGenderSummary(model: ModelEntry): string | null {
 
 function voiceDetails(voice: ModelEntry["voices"][number]): string {
   return [voice.language, voice.gender, voice.sample_rate ? `${voice.sample_rate} Hz` : null, voice.notes].filter(Boolean).join(" · ");
-}
-
-function researchAssetSubline(asset: TtsResearchAsset): string {
-  return [
-    formatBytes(asset.local_size_bytes),
-    asset.license,
-    asset.runtime_status.replaceAll("_", " "),
-    asset.runnable ? "runnable" : "not runnable",
-  ]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 function formatBytes(sizeBytes: number | null | undefined): string | null {

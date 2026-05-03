@@ -322,3 +322,70 @@ models:
     enabled: false
     default: false
     config: {}
+
+  - id: silero-v5-cis-base
+    display_name: Silero V5 CIS Russian Base
+    hf_repo:
+    source_url: https://models.silero.ai/models/tts/ru/v5_cis_base.pt
+    license: MIT
+    size_bytes: 91680514
+    size_label: "92 MB"
+    tier: around-100mb
+    availability: available
+    type: text_to_audio
+    capabilities:
+      - text_to_audio
+      - tts
+    voices:
+      - id: ru_aigul
+        display_name: Aigul
+        language: ru-RU
+        gender: female
+        sample_rate: 24000
+      - id: ru_alexandr
+        display_name: Alexandr
+        language: ru-RU
+        gender: male
+        sample_rate: 24000
+      - id: ru_albina
+        display_name: Albina
+        language: ru-RU
+        gender: female
+        sample_rate: 24000
+      - id: ru_dmitriy
+        display_name: Dmitriy
+        language: ru-RU
+        gender: male
+        sample_rate: 24000
+      - id: ru_zara
+        display_name: Zara
+        language: ru-RU
+        gender: female
+        sample_rate: 24000
+      - id: ru_eduard
+        display_name: Eduard
+        language: ru-RU
+        gender: male
+        sample_rate: 24000
+    adapter: silero_tts
+    runtime: in_process
+    mode: turn_based
+    language_notes: "MIT Silero CIS Russian-family TTS model with multiple ru_* voices."
+    hardware_notes: "Runs through torch.package on CPU. Uses the local downloaded v5_cis_base.pt package."
+    install_notes: "Run: uv run --extra tts python ../scripts/install-tts-models.py --models silero-v5-cis-base"
+    supports_prompt: true
+    supports_streaming: false
+    input_sample_rate: 16000
+    output_sample_rate: 24000
+    enabled: true
+    default: false
+    config:
+      model_path: data/models/research/silero/v5_cis_base.pt
+      device: cpu
+      speaker_map:
+        ru_aigul: ru_aigul
+        ru_alexandr: ru_alexandr
+        ru_albina: ru_albina
+        ru_dmitriy: ru_dmitriy
+        ru_zara: ru_zara
+        ru_eduard: ru_eduard

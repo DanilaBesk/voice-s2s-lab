@@ -25,6 +25,7 @@ def test_catalog_exposes_russian_tts_entries_with_voice_metadata() -> None:
     vits_low = catalog.get("utrobin-vits-low-ru-multispeaker")
     vits_high = catalog.get("utrobin-vits-high-ru-multispeaker")
     vosk_multi = catalog.get("vosk-tts-ru-0-9-multi")
+    silero = catalog.get("silero-v5-cis-base")
 
     assert denis.type == "text_to_audio"
     assert denis.capabilities == ["text_to_audio", "tts"]
@@ -49,6 +50,11 @@ def test_catalog_exposes_russian_tts_entries_with_voice_metadata() -> None:
     assert vosk_multi.adapter == "vosk_tts"
     assert vosk_multi.tier == "around-1gb"
 
+    assert {voice.id: voice.gender for voice in silero.voices}["ru_aigul"] == "female"
+    assert {voice.id: voice.gender for voice in silero.voices}["ru_alexandr"] == "male"
+    assert silero.adapter == "silero_tts"
+    assert silero.tier == "around-100mb"
+
 
 def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
     catalog = ModelCatalog(MODELS_DIR)
@@ -60,7 +66,7 @@ def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
     for entry in enabled_tts:
         public = entry.public_dict()
 
-        assert entry.adapter in {"piper_tts", "transformers_vits_tts", "vosk_tts"}
+        assert entry.adapter in {"piper_tts", "silero_tts", "transformers_vits_tts", "vosk_tts"}
         assert entry.tier in {"lightweight", "around-100mb", "around-1gb"}
         assert entry.availability in {"available", "available_obsolete"}
         assert entry.license in {"MIT", "Apache-2.0"}
@@ -109,6 +115,7 @@ def test_models_endpoint_includes_enabled_russian_tts_entries() -> None:
     assert "utrobin-vits-high-ru-multispeaker" not in model_ids
     assert "vosk-tts-ru-0-9-multi" in model_ids
     assert "vosk-tts-ru-0-8-multi" in model_ids
+    assert "silero-v5-cis-base" in model_ids
     assert "silero-ru-v5-5" not in model_ids
     assert "f5-tts-russian-voice-clone" not in model_ids
     assert "synthetic-local-tts" not in model_ids

@@ -37,6 +37,7 @@ tts = [
   "huggingface-hub>=0.34.0",
   "numpy>=1.26",
   "scipy>=1.12",
+  "soundfile==0.13.1",
   "torch>=2.1,<2.7",
   "transformers==4.52.3",
   "vosk-tts==0.3.61",

@@ -46,18 +46,14 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all
 uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify
 ```
 
-The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them.
-
-The UI exposes these downloaded assets through `GET /api/tts-research-assets` in a separate TTS-mode `Research models` block. This makes Qwen/Kokoro/F5/Silero/RHVoice visible on the site without presenting them as runnable catalog entries.
+The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them. Silero CIS now has a real adapter and moved out of research into the runnable catalog.
 
 Downloaded research assets after the 2026-05-03 interruption:
 
 | Research ID | Source | License | Local size | Runtime status |
 | --- | --- | --- | --- | --- |
 | `qwen3-tts-0-6b-base` | `Qwen/Qwen3-TTS-12Hz-0.6B-Base` | Apache-2.0 | 2.3G | download-only, no adapter |
-| `kokoro-82m` | `hexgrad/Kokoro-82M` | Apache-2.0 | 339M | download-only, no adapter |
 | `f5-tts-russian-mlx-4bit` | `ink-splatters/f5-tts-russian-mlx` | MIT | 222M | download-only, no adapter |
-| `silero-v5-cis-base` | `models.silero.ai` direct files | MIT for CIS branch | 175M | download-only, no adapter |
 | `rhvoice-russian-core-and-voices` | RHVoice GitHub source zips | GPL-2.0 / voice-specific | 14M | download-only, no adapter |
 
 `qwen3-tts-1-7b-base` / `Qwen/Qwen3-TTS-12Hz-1.7B-Base` is intentionally excluded and its partial local snapshot was removed by user request because it is too large for this pass. Only the smaller 0.6B Qwen3-TTS candidate remains declared.
@@ -69,6 +65,7 @@ Downloaded research assets after the 2026-05-03 interruption:
 | `piper-ru-ru-denis-medium` | small, 63 MB | Denis, male | MIT repo; dataset CC0 | `piper_tts` subprocess, ONNX + JSON |
 | `piper-ru-ru-dmitri-medium` | small, 63 MB | Dmitri, male | MIT repo; dataset CC0 | `piper_tts` subprocess, ONNX + JSON |
 | `utrobin-vits-low-ru-multispeaker` | small, 60 MB | speaker 0 female, speaker 1 male | Apache-2.0 | `transformers_vits_tts` |
+| `silero-v5-cis-base` | small, 92 MB | multiple `ru_*` male/female voices | MIT | `silero_tts` / torch.package |
 | `vosk-tts-ru-0-9-multi` | around 1GB request, 747 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
 | `vosk-tts-ru-0-8-multi` | around 1GB request, 767 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
 
@@ -90,13 +87,14 @@ The 60 MB Utrobin VITS low model can sound better than the larger 160 MB Utrobin
 | `mlx-community/whisper-large-asr-4bit` | ASR/STT Whisper model, not TTS. |
 | `piper-ru-ru-irina-medium` | The rhasspy model card lists the source dataset license as unknown. |
 | `piper-ru-ru-ruslan-medium` | Noncommercial/share-alike source licensing. |
-| `silero-ru-v5-5` | Requires a separate runtime implementation and license/distribution review before it can be a real runnable entry. |
+| `silero-ru-v5-5` | Removed in favor of the Russian/CIS MIT `silero-v5-cis-base` local runtime adapter. |
 | `bene-ges/tts_ru_ipa_fastpitch_ruslan` plus HiFiGAN | Around 500MB-class pipeline, but CC-BY-NC and male-only. |
 | `frappuccino/vits2_ru_natasha` | MIT and female, but not male+female and needs a separate VITS2 runtime path. |
 | `facebook/tts_transformer-ru-cv7_css10` | Older Fairseq model with unresolved license status. |
 | `Misha24-10/F5-TTS_RUSSIAN` and similar F5 models | Noncommercial and reference-voice based; not a fixed male/female local voice catalog entry. |
 | `facebook/mms-tts-rus` / `indicnode/mms-tts-rus` | CC-BY-NC. |
 | `Qwen/Qwen3-TTS-12Hz-1.7B-Base` | Apache-2.0 but too large for the current local pass; the smaller 0.6B Qwen3-TTS candidate is kept instead. |
+| `hexgrad/Kokoro-82M` | Apache-2.0 and good lightweight TTS, but the downloaded voice set is not Russian; removed after the Russian-only clarification. |
 
 ## Sources
 
@@ -152,6 +150,11 @@ Evidence recorded on 2026-05-03:
 | Browser check at `http://127.0.0.1:5174/` | TTS dropdown showed `63 MB` Piper Denis/Dmitri, `100MB` Utrobin VITS Low, and both `1GB` Vosk models. |
 | `ps -axo pid,command | rg 'Qwen3-TTS-12Hz-1.7B\|snapshot_download\|install-tts-research-models\|huggingface'` | Confirmed no Qwen3 1.7B or Hugging Face snapshot download process remained after interruption. |
 | `test ! -e data/models/research/huggingface/Qwen__Qwen3-TTS-12Hz-1.7B-Base && echo missing` | Confirmed the Qwen3 1.7B local snapshot directory was removed. |
-| `cd backend && uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify` | Confirmed Qwen3 0.6B, Kokoro, F5 Russian MLX 4-bit, Silero, and RHVoice research assets are present and complete. |
+| `cd backend && uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify` | Confirmed the remaining download-only research assets are present and complete: Qwen3 0.6B, F5 Russian MLX 4-bit, and RHVoice. Silero moved to the normal install manifest. |
 | `find data/models/research -maxdepth 4 \( -name '*.incomplete' -o -name '*.lock' \) -print` | No incomplete or lock files found under downloaded research assets. |
-| `du -sh data/models/research/...` | Confirmed local research sizes: Qwen3 0.6B `2.3G`, Kokoro `339M`, F5 MLX `222M`, Silero `175M`, RHVoice `14M`. |
+| `du -sh data/models/research/...` | Confirmed local research sizes before Russian-only cleanup: Qwen3 0.6B `2.3G`, Kokoro `339M`, F5 MLX `222M`, Silero `175M`, RHVoice `14M`. Kokoro was then removed as non-Russian. |
+| `cd backend && uv run python -m pytest -q` | 32 passed, 7 skipped. Covers runnable catalog loading, research-only exclusions, missing asset diagnostics, adapter registration, and the removed research endpoint returning 404. |
+| `cd backend && VOICE_S2S_RUN_REAL_TTS_TEST=true uv run --extra tts python -m pytest tests/test_tts_real_smoke.py -q` | 6 passed. Real local WAV generation covers Piper Denis, Piper Dmitri, Utrobin VITS Low, Silero CIS, Vosk 0.8, and Vosk 0.9. |
+| `curl http://127.0.0.1:18001/api/models` | TTS models returned through the normal runtime catalog: Piper Denis, Piper Dmitri, Silero CIS, Utrobin VITS Low, Vosk 0.8, and Vosk 0.9. |
+| `curl http://127.0.0.1:18001/api/tts-research-assets` | Returned 404. Downloaded research assets are no longer exposed through an application endpoint or UI block. |
+| Browser check at `http://127.0.0.1:5174/` | The TTS dropdown showed Piper Denis, Piper Dmitri, Silero CIS, Utrobin VITS Low, Vosk 0.8, and Vosk 0.9. No downloaded/research block was visible. Silero loaded from the normal selector, generated Russian text with `ru_alexandr`, and the audio endpoint returned RIFF/WAVE bytes. |

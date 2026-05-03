@@ -69,3 +69,11 @@ models:
         archive_root: vosk-model-tts-ru-0.8-multi
         size_bytes: 804491027
         md5: e35bfb41c66df3891accf5453118da67
+
+  - id: silero-v5-cis-base
+    install_dir: data/models/research/silero
+    notes: "MIT Silero CIS Russian-family model used by the real silero_tts runtime adapter."
+    assets:
+      - url: https://models.silero.ai/models/tts/ru/v5_cis_base.pt
+        path: v5_cis_base.pt
+        size_bytes: 91680514

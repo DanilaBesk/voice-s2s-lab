@@ -102,9 +102,7 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all
 uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify
 ```
 
-The research manifest is [backend/app/tts-research-assets.yaml](backend/app/tts-research-assets.yaml). It currently declares Qwen3-TTS 0.6B Base, Kokoro-82M, F5 Russian MLX 4-bit, Silero CIS base, and RHVoice Russian assets. Qwen3-TTS 1.7B is intentionally excluded because it is too large for the current local test pass.
-
-The site shows these downloaded assets in the TTS mode under `Research models`. They are not mixed into the runnable model selector and cannot be started until a matching adapter is implemented.
+The research manifest is [backend/app/tts-research-assets.yaml](backend/app/tts-research-assets.yaml). It currently keeps Russian-capable or Russian-specific Qwen3-TTS 0.6B Base, F5 Russian MLX 4-bit, and RHVoice Russian assets for future adapter work. Qwen3-TTS 1.7B is intentionally excluded because it is too large for the current local test pass. Kokoro-82M is excluded because the downloaded voice set is not Russian. Silero CIS moved out of research and into the runnable TTS catalog through the real `silero_tts` adapter.
 
 ## Quick Start: Russian TTS
 
@@ -141,6 +139,7 @@ The frontend reads `/api/models` and should not need model-specific branching.
 - `piper-ru-ru-denis-medium`: enabled small Russian male Piper voice, 63 MB.
 - `piper-ru-ru-dmitri-medium`: enabled small Russian male Piper voice, 63 MB.
 - `utrobin-vits-low-ru-multispeaker`: enabled small Russian male+female VITS model, 60 MB.
+- `silero-v5-cis-base`: enabled MIT Silero CIS Russian-family model, 92 MB, multiple `ru_*` male/female voices.
 - `vosk-tts-ru-0-9-multi`: enabled Apache-2.0 Russian male+female Vosk TTS target for the around-1GB request; current non-obsolete Vosk release.
 - `vosk-tts-ru-0-8-multi`: enabled Apache-2.0 Russian male+female Vosk TTS target for around-1GB quality comparison; Vosk marks it obsolete, so it stays clearly labeled.
 - `synthetic-local-tts`: disabled catalog fixture for deterministic backend/frontend tests; it is not a production voice and does not use model weights.
@@ -151,7 +150,6 @@ The editable persona prompt in the UI is for behavior testing. For Qwen audio ou
 The active API surface includes explicit model lifecycle endpoints for both S2S and TTS:
 
 - `GET /api/models`
-- `GET /api/tts-research-assets`
 - `GET /api/runtime`
 - `POST /api/models/{id}/load`
 - `DELETE /api/models/{id}/load`

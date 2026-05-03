@@ -21,6 +21,7 @@ pytestmark = pytest.mark.skipif(
     [
         "piper-ru-ru-denis-medium",
         "piper-ru-ru-dmitri-medium",
+        "silero-v5-cis-base",
         "utrobin-vits-low-ru-multispeaker",
         "vosk-tts-ru-0-8-multi",
         "vosk-tts-ru-0-9-multi",
@@ -56,4 +57,7 @@ async def test_enabled_real_tts_load_and_generate_all_voices(model_id: str, tmp_
         assert output_path.read_bytes().startswith(b"RIFF")
         assert output_path.stat().st_size > 44
         if "speaker_map" in entry.config:
-            assert result.metrics["speaker_id"] == entry.config["speaker_map"][voice.id]
+            if "speaker_id" in result.metrics:
+                assert result.metrics["speaker_id"] == entry.config["speaker_map"][voice.id]
+            if "speaker" in result.metrics:
+                assert result.metrics["speaker"] == entry.config["speaker_map"][voice.id]

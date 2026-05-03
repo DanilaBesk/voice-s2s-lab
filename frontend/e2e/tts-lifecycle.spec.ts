@@ -165,55 +165,36 @@ const voskMulti08Model = {
   install_notes: "Run scripts/install-tts-models.py --models vosk-tts-ru-0-8-multi",
 } satisfies ModelFixture;
 
-const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, voskMulti08Model, voskMultiModel];
+const sileroModel = {
+  id: "silero-v5-cis-base",
+  display_name: "Silero V5 CIS Russian Base",
+  hf_repo: null,
+  source_url: "https://models.silero.ai/models/tts/ru/v5_cis_base.pt",
+  license: "MIT",
+  size_bytes: 91_680_514,
+  size_label: "92 MB",
+  tier: "around-100mb",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [
+    { id: "ru_aigul", display_name: "Aigul", language: "ru-RU", gender: "female", sample_rate: 24000 },
+    { id: "ru_alexandr", display_name: "Alexandr", language: "ru-RU", gender: "male", sample_rate: 24000 },
+  ],
+  adapter: "silero_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "MIT Silero CIS Russian-family TTS model.",
+  hardware_notes: "Runs through torch.package on CPU.",
+  install_notes: "Run scripts/install-tts-models.py --models silero-v5-cis-base",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 24000,
+} satisfies ModelFixture;
+
+const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, sileroModel, voskMulti08Model, voskMultiModel];
 const models = [s2sModel, ...runnableTtsModels];
-const researchAssets = [
-  {
-    id: "qwen3-tts-0-6b-base",
-    display_name: "Qwen3-TTS-12Hz-0.6B-Base",
-    source: "huggingface",
-    source_url: "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-    hf_repo: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-    license: "Apache-2.0",
-    runtime_status: "download_only_no_adapter",
-    status: "downloaded",
-    status_detail: null,
-    install_dir: "data/models/research/huggingface/Qwen__Qwen3-TTS-12Hz-0.6B-Base",
-    local_size_bytes: 2_300_000_000,
-    notes: "Official Qwen3-TTS 0.6B Base.",
-    runnable: false,
-  },
-  {
-    id: "kokoro-82m",
-    display_name: "Kokoro-82M",
-    source: "huggingface",
-    source_url: "https://huggingface.co/hexgrad/Kokoro-82M",
-    hf_repo: "hexgrad/Kokoro-82M",
-    license: "Apache-2.0",
-    runtime_status: "download_only_no_adapter",
-    status: "downloaded",
-    status_detail: null,
-    install_dir: "data/models/research/huggingface/hexgrad__Kokoro-82M",
-    local_size_bytes: 339_000_000,
-    notes: "Kokoro-82M official model and voice packs.",
-    runnable: false,
-  },
-  {
-    id: "f5-tts-russian-mlx-4bit",
-    display_name: "f5-tts-russian-mlx",
-    source: "huggingface",
-    source_url: "https://huggingface.co/ink-splatters/f5-tts-russian-mlx",
-    hf_repo: "ink-splatters/f5-tts-russian-mlx",
-    license: "MIT",
-    runtime_status: "download_only_no_adapter",
-    status: "downloaded",
-    status_detail: null,
-    install_dir: "data/models/research/huggingface/ink-splatters__f5-tts-russian-mlx",
-    local_size_bytes: 222_000_000,
-    notes: "Russian F5-TTS MLX community weights.",
-    runnable: false,
-  },
-];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
   const api = await installTtsApiMock(page);
@@ -227,6 +208,7 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   expect(optionTexts).toEqual(expect.arrayContaining([
     "63 MB · мужчина · Piper Russian Denis Medium · available",
     "63 MB · мужчина · Piper Russian Dmitri Medium · available",
+    "100MB · мужчина+женщина · Silero V5 CIS Russian Base · available",
     "100MB · мужчина+женщина · Utrobin VITS Low Russian Multispeaker · available",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.9 Multi · available",
@@ -238,9 +220,6 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
 
   await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  await expect(page.getByLabel("Скачанные research TTS модели")).toContainText("Qwen3-TTS-12Hz-0.6B-Base");
-  await expect(page.getByLabel("Скачанные research TTS модели")).toContainText("Kokoro-82M");
-  await expect(page.getByLabel("Скачанные research TTS модели")).toContainText("not runnable");
 
   expect(api.loadCalls()).toEqual([]);
 });
@@ -397,10 +376,6 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
 
     if (url.pathname === "/api/runtime" && method === "GET") {
       return fulfillJson(route, runtime);
-    }
-
-    if (url.pathname === "/api/tts-research-assets" && method === "GET") {
-      return fulfillJson(route, { assets: researchAssets });
     }
 
     const loadMatch = url.pathname.match(/^\/api\/models\/([^/]+)\/load$/);
