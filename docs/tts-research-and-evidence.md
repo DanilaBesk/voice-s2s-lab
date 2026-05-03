@@ -46,15 +46,15 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all
 uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify
 ```
 
-The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them. Silero CIS, F5 Russian MLX 4-bit, and Qwen3-TTS 0.6B Base now have real adapters and moved out of research into the runnable catalog.
+The research manifest is `backend/app/tts-research-assets.yaml`. These assets are local evaluation inputs only; they must not appear in `/api/models` until an adapter can really load, unload, and generate audio from them. Silero CIS, F5 Russian MLX 4-bit, Qwen3-TTS 0.6B Base, and RHVoice Russian Core and Voices now have real adapters and moved out of research-only status into the runnable catalog.
 
 Downloaded research assets after the 2026-05-03 interruption:
 
 | Research ID | Source | License | Local size | Runtime status |
 | --- | --- | --- | --- | --- |
-| `rhvoice-russian-core-and-voices` | RHVoice GitHub source zips | GPL-2.0 / voice-specific | 14M | disabled adapter, native engine missing |
+| `rhvoice-russian-core-and-voices` | RHVoice GitHub source zips plus local native source build | GPL-2.0 / voice-specific | 14M research zips, 31M runtime | promoted after native smoke |
 
-RHVoice has a guarded `rhvoice_tts` adapter and disabled catalog metadata for Anna/Aleksandr, but it is intentionally excluded from `/api/models`. Local evidence on 2026-05-03 found only the downloaded Russian language/voice zip assets under `data/models/research/rhvoice`; no `RHVoice-test`, `rhvoice-client`, or `RHVoice` executable was on `PATH`, and `rhvoice-wrapper==0.8.0` failed to initialize because `libRHVoice.dylib` was not available. Keep RHVoice disabled until a real native-engine load and WAV generation smoke passes.
+RHVoice now has a guarded `rhvoice_tts` adapter and enabled catalog metadata for Anna/Aleksandr. Local evidence on 2026-05-03 found no packaged Homebrew formula and no preinstalled `RHVoice-test`, `rhvoice-client`, or `RHVoice` command, so the runnable path is a local RHVoice source build. `scripts/install-rhvoice-runtime.py` builds the native engine with SCons, copies the Russian language plus Anna/Aleksandr voice data into `data/models/rhvoice-runtime`, fixes macOS dylib install names, and the adapter uses `rhvoice-wrapper==0.8.0` with `stream=false`.
 
 `qwen3-tts-1-7b-base` / `Qwen/Qwen3-TTS-12Hz-1.7B-Base` is intentionally excluded and its partial local snapshot was removed by user request because it is too large for this pass. The smaller 0.6B Qwen3-TTS candidate is now declared in the normal install manifest and exposed only through the real `qwen3_tts` adapter.
 
@@ -67,11 +67,12 @@ RHVoice has a guarded `rhvoice_tts` adapter and disabled catalog metadata for An
 | `utrobin-vits-low-ru-multispeaker` | small, 60 MB | speaker 0 female, speaker 1 male | Apache-2.0 | `transformers_vits_tts` |
 | `f5-tts-russian-mlx-4bit` | 222 MiB weights + Vocos vocoder | reference voice | MIT | `f5_mlx_tts` / MLX on Apple Silicon |
 | `qwen3-tts-0-6b-base` | 2.3 GiB snapshot | synthetic reference voice | Apache-2.0 | `qwen3_tts` / qwen-tts voice-clone generation |
+| `rhvoice-russian-core-and-voices` | 31 MiB runtime | Anna female, Aleksandr male | GPL-2.0 / voice-specific | `rhvoice_tts` / native RHVoice dylib + wrapper |
 | `silero-v5-cis-base` | small, 92 MB | multiple `ru_*` male/female voices | MIT | `silero_tts` / torch.package |
 | `vosk-tts-ru-0-9-multi` | around 1GB request, 747 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
 | `vosk-tts-ru-0-8-multi` | around 1GB request, 767 MiB zip | F01/F02/F03 female, M01/M02 male | Apache-2.0 | `vosk_tts` / onnxruntime |
 
-The visible TTS catalog includes small Russian-specialized models, the F5/Qwen3 reference-voice candidates that passed real adapter smokes, and the existing 1GB Vosk quality baseline. Every enabled entry is declared in `backend/app/tts-assets.yaml` and must load before generation.
+The visible TTS catalog includes small Russian-specialized models, the F5/Qwen3 reference-voice candidates that passed real adapter smokes, the native RHVoice Russian runtime, and the existing 1GB Vosk quality baseline. Standard downloadable enabled entries are declared in `backend/app/tts-assets.yaml`; RHVoice is installed by `scripts/install-rhvoice-runtime.py` because it requires a native source build, not just model-file downloads. Every enabled entry must load before generation.
 
 There is no strict enabled 500MB Russian male+female model in the current catalog. The researched 500MB-class candidates either have noncommercial licensing, incomplete runtime boundaries, or only one gender. They are documented as exclusions rather than exposed as fake runtime entries.
 
@@ -168,6 +169,11 @@ Evidence recorded on 2026-05-03:
 | `curl http://127.0.0.1:18001/api/models` | TTS models returned through the normal runtime catalog: Piper Denis, Piper Dmitri, Silero CIS, Utrobin VITS Low, Vosk 0.8, and Vosk 0.9. |
 | `curl http://127.0.0.1:18001/api/tts-research-assets` | Returned 404. Downloaded research assets are no longer exposed through an application endpoint or UI block. |
 | Browser check at `http://127.0.0.1:5174/` | The TTS dropdown showed Piper Denis, Piper Dmitri, Silero CIS, Utrobin VITS Low, Vosk 0.8, and Vosk 0.9. No downloaded/research block was visible. Silero loaded from the normal selector, generated Russian text with `ru_alexandr`, and the audio endpoint returned RIFF/WAVE bytes. |
-| `which RHVoice-test; which rhvoice-client; which RHVoice` | No native RHVoice command-line runtime was installed locally. |
-| `cd backend && uv run --with rhvoice-wrapper==0.8.0 python - <<'PY' ... TTS(threads=1) ... PY` | The Python wrapper installed, but initialization failed with missing `libRHVoice.dylib`; RHVoice therefore remains disabled and absent from `/api/models`. |
-| `unzip -l data/models/research/rhvoice/RHVoice-*.zip` | Confirmed the local RHVoice download contains Russian language FST files and Anna/Aleksandr voice data, not a runnable native engine. |
+| `which RHVoice-test rhvoice-client RHVoice rhvoice` | No native RHVoice command-line runtime was preinstalled locally. |
+| `HOMEBREW_NO_AUTO_UPDATE=1 brew search rhvoice` / `brew info rhvoice` | No Homebrew formula or cask was available for `rhvoice`. |
+| `cd backend && uv run --with rhvoice-wrapper==0.8.0 python -c "... TTS(threads=1) ..."` | The Python wrapper installed, but initialization failed with missing `libRHVoice.dylib`; Python wrapper alone is insufficient. |
+| `cd backend && uv run --with rhvoice-wrapper==0.8.0 --with rhvoice-wrapper-bin python -c "... TTS(...)"` | `rhvoice-wrapper-bin==0.5.0` failed to build from PyPI sdist; after `scons` was installed it still failed because vendored Boost submodule files were absent from the sdist. |
+| `git clone --depth 1 https://github.com/RHVoice/RHVoice.git /tmp/rhvoice-native-smoke` plus targeted `git submodule update` for `external/libs/*`, `data/languages/Russian`, `data/voices/anna`, and `data/voices/aleksandr`; then `scons languages=Russian audio_libs=none dev=true -j4` | Built `libRHVoice.dylib`, `RHVoice-test`, and local libraries successfully. |
+| `cd /tmp/rhvoice-native-smoke && local/bin/RHVoice-test -p anna -i /tmp/rhvoice_input.txt -o /tmp/rhvoice_anna_test.wav && file /tmp/rhvoice_anna_test.wav` | Native CLI smoke wrote RIFF/WAVE PCM 16-bit mono 24000 Hz audio. |
+| `install_name_tool ... /tmp/rhvoice-runtime/lib/*.dylib` then `cd backend && uv run --with rhvoice-wrapper==0.8.0 python -c "... TTS(stream=False, lib_path='/tmp/rhvoice-runtime/lib/libRHVoice.dylib', data_path='/tmp/rhvoice-runtime/data') ..."` | Portable runtime smoke from repo backend cwd wrote RIFF/WAVE PCM 16-bit mono 24000 Hz audio and listed voices `aleksandr`, `anna`. |
+| `cd backend && uv run --extra dev --extra tts python - <<'PY' ... TestClient(app) ... /api/models -> POST /api/models/rhvoice-russian-core-and-voices/load -> POST /api/tts -> GET audio -> DELETE load ... PY` | `/api/models` exposed RHVoice, load returned `ready`, TTS completed through `rhvoice_tts`, audio started with `RIFF` and was 114284 bytes, and unload returned `not_loaded`. |

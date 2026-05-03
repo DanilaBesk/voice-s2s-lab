@@ -38,6 +38,7 @@ tts = [
   "huggingface-hub>=0.34.0",
   "numpy>=1.26",
   "qwen-tts==0.1.1",
+  "rhvoice-wrapper==0.8.0",
   "scipy>=1.12",
   "soundfile==0.13.1",
   "torch>=2.1,<2.7",

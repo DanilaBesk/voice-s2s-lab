@@ -214,6 +214,35 @@ const qwen3TtsModel = {
   status: "not_loaded",
 };
 
+const rhvoiceModel = {
+  id: "rhvoice-russian-core-and-voices",
+  display_name: "RHVoice Russian Core and Voices",
+  hf_repo: null,
+  source_url: "https://github.com/RHVoice",
+  license: "GPL-2.0/voice-specific licenses",
+  size_bytes: 32_505_856,
+  size_label: "31 MiB",
+  tier: "lightweight",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [
+    { id: "anna", display_name: "Anna", language: "ru-RU", gender: "female", sample_rate: 24000 },
+    { id: "aleksandr", display_name: "Aleksandr", language: "ru-RU", gender: "male", sample_rate: 24000 },
+  ],
+  adapter: "rhvoice_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Native RHVoice Russian runtime",
+  hardware_notes: "Requires local RHVoice native dylib",
+  install_notes: "Run scripts/install-rhvoice-runtime.py",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 24000,
+  status: "not_loaded",
+};
+
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
 }
@@ -230,7 +259,7 @@ function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}
 
     if (url.endsWith("/api/models") && method === "GET") {
       return jsonResponse({
-        models: [s2sModel, piperDenisModel, piperDmitriModel, vitsLowModel, f5MlxModel, qwen3TtsModel, sileroModel, vosk08Model, vosk09Model].map((model) => ({
+        models: [s2sModel, piperDenisModel, piperDmitriModel, vitsLowModel, f5MlxModel, qwen3TtsModel, rhvoiceModel, sileroModel, vosk08Model, vosk09Model].map((model) => ({
           ...model,
           status: runtime.model_id === model.id ? runtime.status : "not_loaded",
           status_detail: runtime.model_id === model.id ? runtime.detail : null,
@@ -328,6 +357,7 @@ describe("App", () => {
     expect(screen.getByRole("option", { name: /Utrobin VITS Low Russian Multispeaker/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /F5 Russian MLX 4-bit/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Qwen3-TTS 0\.6B Base/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /RHVoice Russian Core and Voices/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Silero V5 CIS Russian Base/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Vosk Russian TTS 0.8 Multi/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /Vosk Russian TTS 0.9 Multi/ })).toBeVisible();
@@ -335,13 +365,14 @@ describe("App", () => {
     expect(screen.getByRole("option", { name: /100MB · мужчина\+женщина · Utrobin VITS Low Russian Multispeaker · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /250MB · референс-голос · F5 Russian MLX 4-bit · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /2GB · референс-голос · Qwen3-TTS 0\.6B Base · available/ })).toBeVisible();
+    expect(screen.getByRole("option", { name: /31 MiB · мужчина\+женщина · RHVoice Russian Core and Voices · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /100MB · мужчина\+женщина · Silero V5 CIS Russian Base · available/ })).toBeVisible();
     expect(screen.getByRole("option", { name: /1GB · мужчина\+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete/ })).toBeVisible();
     expect(screen.queryByRole("option", { name: /готово|not_loaded|ready|failed|loading/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Qwen3-TTS-12Hz-0\.6B-Base/ })).not.toBeInTheDocument();
   });
 
-  it("does not render disabled RHVoice research assets as selectable TTS models", async () => {
+  it("renders runnable RHVoice as a selectable TTS model", async () => {
     const user = userEvent.setup();
     setupFetch();
 
@@ -349,7 +380,7 @@ describe("App", () => {
 
     await user.click(await screen.findByRole("button", { name: "TTS" }));
 
-    expect(screen.queryByRole("option", { name: /RHVoice Russian Core and Voices/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /RHVoice Russian Core and Voices/ })).toBeVisible();
   });
 
   it("renders expanded catalog metadata and voice details without model-specific branches", async () => {

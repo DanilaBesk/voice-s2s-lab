@@ -382,7 +382,7 @@ models:
     size_bytes: 14933329
     size_label: "14 MB"
     tier: lightweight
-    availability: blocked_runtime_missing_engine
+    availability: available
     type: text_to_audio
     capabilities:
       - text_to_audio
@@ -401,22 +401,24 @@ models:
     adapter: rhvoice_tts
     runtime: in_process
     mode: turn_based
-    language_notes: "RHVoice Russian language data plus Anna and Aleksandr Russian voices. Disabled until the local RHVoice engine library can load and generate WAV audio."
-    hardware_notes: "Requires the native RHVoice engine library in addition to the Python wrapper and voice/language data."
-    install_notes: "Research assets are installed through scripts/install-tts-research-models.py --models rhvoice-russian-core-and-voices. Keep disabled until RHVoice load/generate smoke passes locally."
+    language_notes: "RHVoice Russian language data plus Anna and Aleksandr Russian voices. Enabled after local native RHVoice load/generate WAV smoke passed."
+    hardware_notes: "Requires the native RHVoice engine library, rhvoice-wrapper, and expanded Russian language/voice data."
+    install_notes: "Run scripts/install-rhvoice-runtime.py to build the native RHVoice runtime into data/models/rhvoice-runtime before loading this model."
     supports_prompt: true
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 24000
-    enabled: false
+    enabled: true
     default: false
     config:
-      data_path: data/models/research/rhvoice
+      data_path: data/models/rhvoice-runtime/data
+      lib_path: data/models/rhvoice-runtime/lib/libRHVoice.dylib
       required_files:
-        - RHVoice-Russian-main.zip
-        - RHVoice-anna-rus-main.zip
-        - RHVoice-aleksandr-rus-main.zip
+        - languages/Russian/language.info
+        - voices/anna/voice.info
+        - voices/aleksandr/voice.info
       threads: 1
+      stream: false
       voice_map:
         anna: anna
         aleksandr: aleksandr

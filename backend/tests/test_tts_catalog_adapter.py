@@ -83,11 +83,14 @@ def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
     for entry in enabled_tts:
         public = entry.public_dict()
 
-        assert entry.adapter in {"f5_mlx_tts", "piper_tts", "qwen3_tts", "silero_tts", "transformers_vits_tts", "vosk_tts"}
+        assert entry.adapter in {"f5_mlx_tts", "piper_tts", "qwen3_tts", "rhvoice_tts", "silero_tts", "transformers_vits_tts", "vosk_tts"}
         assert entry.tier in {"lightweight", "around-100mb", "around-250mb", "around-1gb", "around-2gb"}
         assert entry.availability in {"available", "available_obsolete"}
-        assert entry.license in {"MIT", "Apache-2.0"}
-        assert manifest.has_model(entry.id)
+        assert entry.license in {"MIT", "Apache-2.0", "GPL-2.0/voice-specific licenses"}
+        if entry.adapter == "rhvoice_tts":
+            assert "install-rhvoice-runtime" in entry.install_notes
+        else:
+            assert manifest.has_model(entry.id)
         assert "Catalog-only" not in entry.install_notes
         assert entry.size_bytes is not None
         assert public["availability"] == entry.availability
@@ -122,15 +125,17 @@ def test_adapter_registry_resolves_tts_adapters() -> None:
     assert "synthetic_tts" in ADAPTER_REGISTRY
 
 
-def test_rhvoice_catalog_entry_is_disabled_until_real_runtime_smoke_passes() -> None:
+def test_rhvoice_catalog_entry_is_enabled_after_real_runtime_smoke_passes() -> None:
     catalog = ModelCatalog(MODELS_DIR)
     rhvoice = catalog.get("rhvoice-russian-core-and-voices")
 
-    assert rhvoice.enabled is False
+    assert rhvoice.enabled is True
     assert rhvoice.adapter == "rhvoice_tts"
-    assert rhvoice.availability == "blocked_runtime_missing_engine"
+    assert rhvoice.availability == "available"
     assert {voice.id: voice.gender for voice in rhvoice.voices} == {"anna": "female", "aleksandr": "male"}
-    assert "RHVoice engine" in rhvoice.hardware_notes
+    assert rhvoice.config["lib_path"] == "data/models/rhvoice-runtime/lib/libRHVoice.dylib"
+    assert rhvoice.config["data_path"] == "data/models/rhvoice-runtime/data"
+    assert rhvoice.config["stream"] is False
 
 
 def test_models_endpoint_includes_enabled_russian_tts_entries() -> None:
@@ -150,7 +155,7 @@ def test_models_endpoint_includes_enabled_russian_tts_entries() -> None:
     assert "qwen3-tts-0-6b-base" in model_ids
     assert "silero-ru-v5-5" not in model_ids
     assert "f5-tts-russian-mlx-4bit" in model_ids
-    assert "rhvoice-russian-core-and-voices" not in model_ids
+    assert "rhvoice-russian-core-and-voices" in model_ids
     assert "synthetic-local-tts" not in model_ids
     if before_adapters is not None:
         assert app.state.adapters == before_adapters
@@ -278,9 +283,19 @@ async def test_f5_mlx_adapter_reports_missing_local_snapshot(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
-async def test_rhvoice_adapter_reports_missing_native_engine_or_wrapper() -> None:
+async def test_rhvoice_adapter_reports_missing_native_engine_or_wrapper(tmp_path: Path) -> None:
     catalog = ModelCatalog(MODELS_DIR)
-    entry = catalog.get("rhvoice-russian-core-and-voices")
+    base_entry = catalog.get("rhvoice-russian-core-and-voices")
+    entry = base_entry.model_copy(
+        update={
+            "config": {
+                **base_entry.config,
+                "lib_path": str(tmp_path / "missing" / "libRHVoice.dylib"),
+                "data_path": str(tmp_path / "missing" / "data"),
+                "required_files": ["lib/libRHVoice.dylib"],
+            }
+        }
+    )
 
     adapter = ADAPTER_REGISTRY["rhvoice_tts"]()
     health = await adapter.prepare(entry)

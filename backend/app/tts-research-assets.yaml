@@ -3,8 +3,8 @@ models:
     install_dir: data/models/research/rhvoice
     source: url
     license: GPL-2.0/voice-specific licenses
-    runtime_status: blocked_runtime_missing_engine
-    notes: "RHVoice Russian language and two Russian voice repositories. A guarded rhvoice_tts adapter exists, but the local machine has no native RHVoice engine library, so this remains disabled and excluded from /api/models until load/generate smoke passes."
+    runtime_status: promoted_to_runnable_catalog_after_native_smoke
+    notes: "RHVoice Russian language and two Russian voice repositories. The normal runtime now uses a local native RHVoice source build installed by scripts/install-rhvoice-runtime.py into data/models/rhvoice-runtime."
     assets:
       - url: https://github.com/RHVoice/Russian/archive/refs/heads/main.zip
         path: RHVoice-Russian-main.zip

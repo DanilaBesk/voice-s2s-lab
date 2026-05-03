@@ -1858,6 +1858,15 @@ wheels = [
 ]
 
 [[package]]
+name = "rhvoice-wrapper"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/d5/cd09b8abbe4da0fd22693ad57bcd56f4108e043d87cf9de9295b70804906/rhvoice-wrapper-0.8.0.tar.gz", hash = "sha256:0d28c19a584ee803d1368b8f8b55218a7f611072d103102472aaaa101b628b28", size = 28360, upload-time = "2023-11-27T03:14:13.491Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/af/28baf609c910907273a59a4576534263855aee18e8eced670ee45012ef4f/rhvoice_wrapper-0.8.0-py3-none-any.whl", hash = "sha256:1a49f16cf257cefda127d0369c278a56b7d77a5d03ca85e964bc45dd41f2fd84", size = 27235, upload-time = "2023-11-27T03:14:11.779Z" },
+]
+
+[[package]]
 name = "rich"
 version = "15.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2501,6 +2510,7 @@ tts = [
     { name = "numpy" },
     { name = "piper-tts" },
     { name = "qwen-tts" },
+    { name = "rhvoice-wrapper" },
     { name = "scipy" },
     { name = "soundfile" },
     { name = "torch" },
@@ -2530,6 +2540,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "qwen-omni-utils", marker = "extra == 'qwen'", specifier = "==0.0.9" },
     { name = "qwen-tts", marker = "extra == 'tts'", specifier = "==0.1.1" },
+    { name = "rhvoice-wrapper", marker = "extra == 'tts'", specifier = "==0.8.0" },
     { name = "scipy", marker = "extra == 'tts'", specifier = ">=1.12" },
     { name = "soundfile", marker = "extra == 'qwen'", specifier = "==0.13.1" },
     { name = "soundfile", marker = "extra == 'tts'", specifier = "==0.13.1" },

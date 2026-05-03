@@ -243,7 +243,35 @@ const qwen3TtsModel = {
   output_sample_rate: 24000,
 } satisfies ModelFixture;
 
-const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, f5MlxModel, sileroModel, voskMulti08Model, voskMultiModel, qwen3TtsModel];
+const rhvoiceModel = {
+  id: "rhvoice-russian-core-and-voices",
+  display_name: "RHVoice Russian Core and Voices",
+  hf_repo: null,
+  source_url: "https://github.com/RHVoice",
+  license: "GPL-2.0/voice-specific licenses",
+  size_bytes: 32_505_856,
+  size_label: "31 MiB",
+  tier: "lightweight",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [
+    { id: "anna", display_name: "Anna", language: "ru-RU", gender: "female", sample_rate: 24000 },
+    { id: "aleksandr", display_name: "Aleksandr", language: "ru-RU", gender: "male", sample_rate: 24000 },
+  ],
+  adapter: "rhvoice_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Native RHVoice Russian runtime.",
+  hardware_notes: "Requires local RHVoice native dylib.",
+  install_notes: "Run scripts/install-rhvoice-runtime.py",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 24000,
+} satisfies ModelFixture;
+
+const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, f5MlxModel, rhvoiceModel, sileroModel, voskMulti08Model, voskMultiModel, qwen3TtsModel];
 const models = [s2sModel, ...runnableTtsModels];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
@@ -261,6 +289,7 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
     "100MB · мужчина+женщина · Silero V5 CIS Russian Base · available",
     "100MB · мужчина+женщина · Utrobin VITS Low Russian Multispeaker · available",
     "250MB · референс-голос · F5 Russian MLX 4-bit · available",
+    "31 MiB · мужчина+женщина · RHVoice Russian Core and Voices · available",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.9 Multi · available",
     "2GB · референс-голос · Qwen3-TTS 0.6B Base · available",
@@ -269,9 +298,9 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   expect(optionTexts.join(" ")).not.toContain("noncommercial");
   expect(optionTexts.join(" ")).toContain("F5 Russian MLX 4-bit");
   expect(optionTexts.join(" ")).toContain("Qwen3-TTS 0.6B Base");
-  expect(optionTexts.join(" ")).not.toContain("RHVoice Russian Core and Voices");
+  expect(optionTexts.join(" ")).toContain("RHVoice Russian Core and Voices");
 
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("RHVoice Russian Core and Voices");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
 
   expect(api.loadCalls()).toEqual([]);
@@ -371,7 +400,7 @@ test("covers runnable TTS start generation switch unload stop and duplicate-star
 });
 
 test("shows TTS load errors without touching a real runtime", async ({ page }) => {
-  const api = await installTtsApiMock(page, { failLoadFor: "piper-ru-ru-denis-medium" });
+  const api = await installTtsApiMock(page, { failLoadFor: "rhvoice-russian-core-and-voices" });
 
   await page.goto("/");
   await switchToTts(page);
@@ -379,7 +408,7 @@ test("shows TTS load errors without touching a real runtime", async ({ page }) =
 
   await expect(page.getByRole("alert")).toContainText("TTS runtime missing");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
+  expect(api.count("POST", "/api/models/rhvoice-russian-core-and-voices/load")).toBe(1);
   expect(api.count("POST", "/api/tts")).toBe(0);
 });
 

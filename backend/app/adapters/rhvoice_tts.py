@@ -36,6 +36,8 @@ class RHVoiceTtsAdapter:
 
         try:
             kwargs: dict[str, Any] = {"threads": int(config.config.get("threads", 1))}
+            if "stream" in config.config:
+                kwargs["stream"] = bool(config.config["stream"])
             if data_path is not None:
                 kwargs["data_path"] = str(data_path)
             if config.config.get("lib_path"):
