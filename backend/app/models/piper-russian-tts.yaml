@@ -29,7 +29,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: false
+    enabled: true
     default: false
     config:
       piper_executable: piper
@@ -67,7 +67,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: false
+    enabled: true
     default: false
     config:
       piper_executable: piper
@@ -109,7 +109,7 @@ models:
     supports_streaming: false
     input_sample_rate: 16000
     output_sample_rate: 22050
-    enabled: false
+    enabled: true
     default: false
     config:
       model_dir: data/models/huggingface/utrobinmv__tts_ru_free_hf_vits_low_multispeaker

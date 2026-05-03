@@ -16,8 +16,17 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("model_id", ["vosk-tts-ru-0-8-multi", "vosk-tts-ru-0-9-multi"])
-async def test_enabled_vosk_real_tts_load_and_generate_all_voices(model_id: str, tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "piper-ru-ru-denis-medium",
+        "piper-ru-ru-dmitri-medium",
+        "utrobin-vits-low-ru-multispeaker",
+        "vosk-tts-ru-0-8-multi",
+        "vosk-tts-ru-0-9-multi",
+    ],
+)
+async def test_enabled_real_tts_load_and_generate_all_voices(model_id: str, tmp_path: Path) -> None:
     entry = state.catalog.get(model_id)
     adapter = ADAPTER_REGISTRY[entry.adapter]()
 
@@ -46,4 +55,5 @@ async def test_enabled_vosk_real_tts_load_and_generate_all_voices(model_id: str,
         assert output_path.exists()
         assert output_path.read_bytes().startswith(b"RIFF")
         assert output_path.stat().st_size > 44
-        assert result.metrics["speaker_id"] == entry.config["speaker_map"][voice.id]
+        if "speaker_map" in entry.config:
+            assert result.metrics["speaker_id"] == entry.config["speaker_map"][voice.id]

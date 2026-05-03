@@ -61,6 +61,68 @@ const s2sModel = {
   default: true,
 } satisfies ModelFixture;
 
+const piperDenisModel = {
+  id: "piper-ru-ru-denis-medium",
+  display_name: "Piper Russian Denis Medium",
+  hf_repo: "rhasspy/piper-voices",
+  source_url: "https://huggingface.co/rhasspy/piper-voices",
+  license: "MIT",
+  size_bytes: 63_206_117,
+  size_label: "63 MB",
+  tier: "lightweight",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [{ id: "ru_RU-denis-medium", display_name: "Denis", language: "ru-RU", gender: "male", sample_rate: 22050 }],
+  adapter: "piper_tts",
+  runtime: "subprocess",
+  mode: "turn_based",
+  language_notes: "Small Russian Piper voice.",
+  hardware_notes: "Runs through Piper on CPU.",
+  install_notes: "Run scripts/install-tts-models.py --models piper-ru-ru-denis-medium",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 22050,
+} satisfies ModelFixture;
+
+const piperDmitriModel = {
+  ...piperDenisModel,
+  id: "piper-ru-ru-dmitri-medium",
+  display_name: "Piper Russian Dmitri Medium",
+  size_bytes: 63_206_118,
+  voices: [{ id: "ru_RU-dmitri-medium", display_name: "Dmitri", language: "ru-RU", gender: "male", sample_rate: 22050 }],
+  install_notes: "Run scripts/install-tts-models.py --models piper-ru-ru-dmitri-medium",
+} satisfies ModelFixture;
+
+const vitsLowModel = {
+  id: "utrobin-vits-low-ru-multispeaker",
+  display_name: "Utrobin VITS Low Russian Multispeaker",
+  hf_repo: "utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
+  source_url: "https://huggingface.co/utrobinmv/tts_ru_free_hf_vits_low_multispeaker",
+  license: "Apache-2.0",
+  size_bytes: 60_360_313,
+  size_label: "60 MB",
+  tier: "around-100mb",
+  availability: "available",
+  type: "text_to_audio",
+  capabilities: ["text_to_audio", "tts"],
+  voices: [
+    { id: "speaker-0", display_name: "Speaker 0", language: "ru-RU", gender: "female", sample_rate: 22050 },
+    { id: "speaker-1", display_name: "Speaker 1", language: "ru-RU", gender: "male", sample_rate: 22050 },
+  ],
+  adapter: "transformers_vits_tts",
+  runtime: "in_process",
+  mode: "turn_based",
+  language_notes: "Small Apache-2.0 Russian multispeaker VITS model.",
+  hardware_notes: "Runs through Transformers on CPU.",
+  install_notes: "Run scripts/install-tts-models.py --models utrobin-vits-low-ru-multispeaker",
+  supports_prompt: true,
+  supports_streaming: false,
+  input_sample_rate: 16000,
+  output_sample_rate: 22050,
+} satisfies ModelFixture;
+
 const voskMultiModel = {
   id: "vosk-tts-ru-0-9-multi",
   display_name: "Vosk Russian TTS 0.9 Multi",
@@ -103,7 +165,7 @@ const voskMulti08Model = {
   install_notes: "Run scripts/install-tts-models.py --models vosk-tts-ru-0-8-multi",
 } satisfies ModelFixture;
 
-const runnableTtsModels = [voskMulti08Model, voskMultiModel];
+const runnableTtsModels = [piperDenisModel, piperDmitriModel, vitsLowModel, voskMulti08Model, voskMultiModel];
 const models = [s2sModel, ...runnableTtsModels];
 
 test("renders the expanded Russian TTS catalog without loading on selection", async ({ page }) => {
@@ -116,6 +178,9 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   await expect(modelSelect.locator("option")).toHaveText([...runnableTtsModels].sort(compareTtsCatalogModels).map(modelOptionLabel));
   const optionTexts = await modelSelect.locator("option").allTextContents();
   expect(optionTexts).toEqual(expect.arrayContaining([
+    "63 MB · мужчина · Piper Russian Denis Medium · available",
+    "63 MB · мужчина · Piper Russian Dmitri Medium · available",
+    "100MB · мужчина+женщина · Utrobin VITS Low Russian Multispeaker · available",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.8 Multi · available_obsolete",
     "1GB · мужчина+женщина · Vosk Russian TTS 0.9 Multi · available",
   ]));
@@ -123,7 +188,7 @@ test("renders the expanded Russian TTS catalog without loading on selection", as
   expect(optionTexts.join(" ")).not.toContain("noncommercial");
   expect(optionTexts.join(" ")).not.toContain("F5-TTS");
 
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Vosk Russian TTS 0.8 Multi");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
 
   expect(api.loadCalls()).toEqual([]);
@@ -136,6 +201,13 @@ test("shows expanded catalog metadata and male female multispeaker voice choices
   await switchToTts(page);
 
   const modelSelect = page.getByRole("combobox", { name: "Модель" });
+  await modelSelect.selectOption("utrobin-vits-low-ru-multispeaker");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("60 MB");
+  await expect(page.getByLabel("Метаданные модели")).toContainText("around-100mb");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 0");
+  await expect(page.getByLabel("Голоса модели")).toContainText("Speaker 1");
+  await expect(page.getByRole("combobox", { name: "Голос" }).locator("option")).toHaveText(["Speaker 0", "Speaker 1"]);
+
   await modelSelect.selectOption("vosk-tts-ru-0-8-multi");
   const voiceSelect = page.getByRole("combobox", { name: "Голос" });
   await expect(page.getByLabel("Метаданные модели")).toContainText("767 MiB");
@@ -165,37 +237,37 @@ test("covers runnable TTS start generation switch unload stop and duplicate-star
   await expect(generateButton).toBeDisabled();
   expect(api.count("POST", "/api/tts")).toBe(0);
 
-  await modelSelect.selectOption("vosk-tts-ru-0-9-multi");
-  await expect(page.getByLabel("Выбрана модель")).toContainText("Vosk Russian TTS 0.9 Multi");
+  await modelSelect.selectOption("piper-ru-ru-denis-medium");
+  await expect(page.getByLabel("Выбрана модель")).toContainText("Piper Russian Denis Medium");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
   expect(api.loadCalls()).toEqual([]);
 
   await page.getByRole("button", { name: /запустить модель/i }).click();
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Vosk Russian TTS 0.9 Multi");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Denis Medium");
   await expect(generateButton).toBeEnabled();
-  expect(api.count("POST", "/api/models/vosk-tts-ru-0-9-multi/load")).toBe(1);
+  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
 
   await expect(page.getByRole("button", { name: /модель готова/i })).toBeDisabled();
-  expect(api.count("POST", "/api/models/vosk-tts-ru-0-9-multi/load")).toBe(1);
+  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
 
-  await page.getByRole("combobox", { name: "Голос" }).selectOption("M01");
+  await page.getByRole("combobox", { name: "Голос" }).selectOption("ru_RU-denis-medium");
   await generateButton.click();
   await expect(page.getByText("TTS готов.")).toBeVisible();
   await expect(page.locator(".response-box")).toHaveText("Привет из e2e");
   expect(api.count("POST", "/api/tts")).toBe(1);
   expect(api.lastBody("/api/tts")).toMatchObject({
-    model_id: "vosk-tts-ru-0-9-multi",
+    model_id: "piper-ru-ru-denis-medium",
     text: "Привет из e2e",
-    voice: "M01",
+    voice: "ru_RU-denis-medium",
   });
 
   await modelSelect.selectOption("vosk-tts-ru-0-8-multi");
   await expect(page.getByLabel("Выбрана модель")).toContainText("Vosk Russian TTS 0.8 Multi");
-  await expect(page.getByLabel("Загруженная модель")).toContainText("Vosk Russian TTS 0.9 Multi");
+  await expect(page.getByLabel("Загруженная модель")).toContainText("Piper Russian Denis Medium");
 
   await page.getByRole("button", { name: /запустить модель/i }).click();
   await expect(page.getByLabel("Загруженная модель")).toContainText("Vosk Russian TTS 0.8 Multi");
-  expect(api.count("DELETE", "/api/models/vosk-tts-ru-0-9-multi/load")).toBe(1);
+  expect(api.count("DELETE", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
   expect(api.count("POST", "/api/models/vosk-tts-ru-0-8-multi/load")).toBe(1);
 
   await page.getByRole("button", { name: /остановить модель/i }).click();
@@ -210,15 +282,15 @@ test("covers runnable TTS start generation switch unload stop and duplicate-star
 });
 
 test("shows TTS load errors without touching a real runtime", async ({ page }) => {
-  const api = await installTtsApiMock(page, { failLoadFor: "vosk-tts-ru-0-8-multi" });
+  const api = await installTtsApiMock(page, { failLoadFor: "piper-ru-ru-denis-medium" });
 
   await page.goto("/");
   await switchToTts(page);
   await page.getByRole("button", { name: /запустить модель/i }).click();
 
-  await expect(page.getByRole("alert")).toContainText("Vosk runtime missing");
+  await expect(page.getByRole("alert")).toContainText("TTS runtime missing");
   await expect(page.getByLabel("Загруженная модель")).toContainText("-");
-  expect(api.count("POST", "/api/models/vosk-tts-ru-0-8-multi/load")).toBe(1);
+  expect(api.count("POST", "/api/models/piper-ru-ru-denis-medium/load")).toBe(1);
   expect(api.count("POST", "/api/tts")).toBe(0);
 });
 
@@ -279,7 +351,7 @@ async function installTtsApiMock(page: Page, options: { failLoadFor?: string } =
     const loadMatch = url.pathname.match(/^\/api\/models\/([^/]+)\/load$/);
     if (loadMatch && method === "POST") {
       const modelId = decodeURIComponent(loadMatch[1]);
-      runtime = options.failLoadFor === modelId ? { model_id: modelId, status: "failed", detail: "Vosk runtime missing" } : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
+      runtime = options.failLoadFor === modelId ? { model_id: modelId, status: "failed", detail: "TTS runtime missing" } : { model_id: modelId, status: "ready", detail: `Loaded ${modelId}` };
       return fulfillJson(route, runtime);
     }
 
@@ -429,6 +501,7 @@ async function listFiles(root: string): Promise<string[]> {
     const fullPath = path.join(root, entry.name);
     if (entry.isDirectory()) {
       if ([".git", ".beads", "node_modules", "dist", "playwright-report", "test-results", ".venv", "venv", "__pycache__"].includes(entry.name)) continue;
+      if (fullPath.includes(`${path.sep}data${path.sep}models${path.sep}`)) continue;
       files.push(...(await listFiles(fullPath)));
       continue;
     }
