@@ -1,3 +1,6 @@
+import io
+import wave
+
 from fastapi.testclient import TestClient
 
 from app.adapters.base import AdapterError
@@ -6,6 +9,16 @@ from app.main import app, state
 
 
 client = TestClient(app)
+
+
+def _wav_bytes() -> bytes:
+    output = io.BytesIO()
+    with wave.open(output, "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(24_000)
+        handle.writeframes(b"\x00\x00" * 32)
+    return output.getvalue()
 
 
 def _reset_runtime_state():
@@ -237,7 +250,7 @@ def test_tts_generation_reports_failed_runtime(monkeypatch):
 def test_tts_reference_voice_upload_returns_adapter_options_path():
     response = client.post(
         "/api/tts/reference-voices",
-        files={"audio": ("sample.wav", b"RIFFfake-reference", "audio/wav")},
+        files={"audio": ("sample.wav", _wav_bytes(), "audio/wav")},
         data={"display_name": "My reference", "ref_text": "Пример голоса"},
     )
 
@@ -249,7 +262,7 @@ def test_tts_reference_voice_upload_returns_adapter_options_path():
     assert payload["ref_audio_path"].endswith("/audio.wav")
 
     audio_path = state.sessions.session_dir("tts") / "reference_voices" / payload["voice_id"] / "audio.wav"
-    assert audio_path.read_bytes() == b"RIFFfake-reference"
+    assert audio_path.read_bytes().startswith(b"RIFF")
 
 
 def test_tts_reference_voice_upload_rejects_unsupported_audio():
@@ -260,3 +273,13 @@ def test_tts_reference_voice_upload_rejects_unsupported_audio():
 
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "unsupported_reference_audio"
+
+
+def test_tts_reference_voice_upload_rejects_large_audio():
+    response = client.post(
+        "/api/tts/reference-voices",
+        files={"audio": ("sample.wav", b"0" * (10 * 1024 * 1024 + 1), "audio/wav")},
+    )
+
+    assert response.status_code == 413
+    assert response.json()["detail"]["code"] == "reference_audio_too_large"

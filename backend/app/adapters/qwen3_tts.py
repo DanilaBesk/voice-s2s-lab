@@ -13,6 +13,8 @@ from app.catalog import ModelCatalogEntry
 from app.events import EventLog, Timer
 from app.tts_assets import _resolve_repo_path
 
+DEFAULT_QWEN3_MAX_NEW_TOKENS = 80
+
 
 class Qwen3TtsAdapter:
     def __init__(self) -> None:
@@ -100,33 +102,37 @@ class Qwen3TtsAdapter:
         self.sessions.discard(session_id)
 
     def _generate_sync(self, turn: AudioTurn) -> AdapterResult:
-        if self.config is None or self.model is None or self.soundfile is None:
+        config = self.config
+        model = self.model
+        soundfile = self.soundfile
+        if config is None or model is None or soundfile is None:
             raise AdapterError("model_not_ready", "Qwen3 TTS adapter is not ready")
         text = str(turn.options.get("text") or turn.persona_prompt or "").strip()
         if not text:
             raise AdapterError("empty_tts_text", "TTS text is empty")
-        voice = str(turn.options.get("voice") or self.config.voices[0].id)
-        language = str(turn.options.get("language") or self.config.config.get("language", "Russian"))
-        ref_audio, ref_text, x_vector_only = self._reference_prompt(turn, voice)
+        voice = str(turn.options.get("voice") or config.voices[0].id)
+        language = str(turn.options.get("language") or config.config.get("language", "Russian"))
+        max_new_tokens = _bounded_max_new_tokens(turn.options.get("max_new_tokens"), config.config.get("max_new_tokens"))
+        ref_audio, ref_text, x_vector_only = self._reference_prompt(turn, voice, config)
 
         timer = Timer()
         event_log = EventLog()
         event_log.add("adapter.started", "Qwen3 TTS turn started", session_id=turn.session_id, turn_id=turn.turn_id, voice=voice)
         try:
             with self._generation_lock:
-                wavs, sample_rate = self.model.generate_voice_clone(
+                wavs, sample_rate = model.generate_voice_clone(
                     text=text,
                     language=language,
                     ref_audio=ref_audio,
                     ref_text=ref_text,
                     x_vector_only_mode=x_vector_only,
-                    non_streaming_mode=bool(self.config.config.get("non_streaming_mode", True)),
-                    max_new_tokens=int(turn.options.get("max_new_tokens", self.config.config.get("max_new_tokens", 512))),
+                    non_streaming_mode=bool(config.config.get("non_streaming_mode", True)),
+                    max_new_tokens=max_new_tokens,
                 )
             if not wavs:
                 raise AdapterError("no_audio_output", "Qwen3 TTS generated no audio output")
             turn.output_path.parent.mkdir(parents=True, exist_ok=True)
-            self.soundfile.write(str(turn.output_path), wavs[0], int(sample_rate))
+            soundfile.write(str(turn.output_path), wavs[0], int(sample_rate))
         except AdapterError:
             raise
         except Exception as exc:
@@ -137,18 +143,17 @@ class Qwen3TtsAdapter:
             text=text,
             output_path=turn.output_path,
             events=event_log.as_list(),
-            metrics={"adapter_ms": timer.elapsed_ms(), "output_sample_rate": int(sample_rate), "voice": voice},
+            metrics={"adapter_ms": timer.elapsed_ms(), "output_sample_rate": int(sample_rate), "voice": voice, "max_new_tokens": max_new_tokens},
             warnings=["Qwen3-TTS 0.6B Base requires a voice-clone reference; this catalog entry uses a deterministic local reference for runnable smoke coverage."],
         )
 
-    def _reference_prompt(self, turn: AudioTurn, voice: str) -> tuple[str, str, bool]:
-        assert self.config is not None
+    def _reference_prompt(self, turn: AudioTurn, voice: str, config: ModelCatalogEntry) -> tuple[str, str, bool]:
         if turn.options.get("ref_audio_path"):
             return str(_resolve_repo_path(str(turn.options["ref_audio_path"]))), str(turn.options.get("ref_text") or ""), bool(turn.options.get("x_vector_only_mode", True))
-        configured = self.config.config.get("reference_voices", {}).get(voice, {})
+        configured = config.config.get("reference_voices", {}).get(voice, {})
         if configured.get("ref_audio_path"):
             return str(_resolve_repo_path(str(configured["ref_audio_path"]))), str(configured.get("ref_text") or ""), bool(configured.get("x_vector_only_mode", True))
-        ref_path = _ensure_sine_reference(_resolve_repo_path(str(self.config.config.get("generated_reference_path", ".local/qwen3-tts/reference.wav"))))
+        ref_path = _ensure_sine_reference(_resolve_repo_path(str(config.config.get("generated_reference_path", ".local/qwen3-tts/reference.wav"))))
         return str(ref_path), "", True
 
 
@@ -162,6 +167,20 @@ def _resolve_dtype(torch: Any, configured: str, device: str) -> Any:
     if device == "cuda":
         return torch.bfloat16
     return torch.float32
+
+
+def _bounded_max_new_tokens(requested: Any, configured: Any) -> int:
+    configured_limit = _positive_int(configured, DEFAULT_QWEN3_MAX_NEW_TOKENS)
+    requested_limit = _positive_int(requested, configured_limit)
+    return min(requested_limit, configured_limit)
+
+
+def _positive_int(value: Any, fallback: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    return parsed if parsed > 0 else fallback
 
 
 def _ensure_sine_reference(path: Path) -> Path:

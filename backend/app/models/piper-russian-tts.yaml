@@ -465,7 +465,7 @@ models:
       language: Russian
       device: cpu
       dtype: float32
-      max_new_tokens: 512
+      max_new_tokens: 80
       non_streaming_mode: true
       required_files:
         - config.json

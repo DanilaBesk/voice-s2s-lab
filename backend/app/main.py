@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import asyncio
+import io
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
@@ -26,6 +27,8 @@ DEFAULT_PERSONA_PROMPT = (
     "прямые ответы, практические примеры и дружелюбный, но не театральный тон. Оставайся "
     "в роли полезного русскоязычного партнера по разговору."
 )
+MAX_TTS_REFERENCE_AUDIO_BYTES = 10 * 1024 * 1024
+MAX_TTS_REFERENCE_AUDIO_SECONDS = 8
 
 
 class CreateSessionRequest(BaseModel):
@@ -397,18 +400,46 @@ async def upload_tts_reference_voice(
     body = await audio.read()
     if not body:
         raise HTTPException(status_code=400, detail={"code": "empty_reference_audio", "message": "Reference audio is empty"})
+    if len(body) > MAX_TTS_REFERENCE_AUDIO_BYTES:
+        raise HTTPException(status_code=413, detail={"code": "reference_audio_too_large", "message": "Reference audio must be 10 MB or smaller"})
 
     voice_id = new_id("ref_voice")
     voice_dir = state.sessions.session_dir("tts") / "reference_voices" / voice_id
     voice_dir.mkdir(parents=True, exist_ok=True)
-    audio_path = voice_dir / f"audio{suffix}"
-    audio_path.write_bytes(body)
+    try:
+        normalized_body = _normalize_reference_audio(body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"code": "invalid_reference_audio", "message": str(exc)}) from exc
+    audio_path = voice_dir / "audio.wav"
+    audio_path.write_bytes(normalized_body)
     return TtsReferenceVoiceResponse(
         voice_id=voice_id,
         display_name=(display_name or Path(filename).stem or voice_id).strip(),
         ref_audio_path=str(audio_path),
         ref_text=(ref_text or "").strip(),
     )
+
+
+def _normalize_reference_audio(body: bytes) -> bytes:
+    try:
+        import soundfile as sf
+    except Exception as exc:
+        raise ValueError(f"soundfile is required to decode reference audio: {type(exc).__name__}: {exc}") from exc
+    try:
+        audio_data, sample_rate = sf.read(io.BytesIO(body), dtype="float32", always_2d=True)
+    except Exception as exc:
+        raise ValueError(f"Reference audio could not be decoded: {type(exc).__name__}: {exc}") from exc
+    if len(audio_data) == 0:
+        raise ValueError("Reference audio is empty")
+    max_frames = max(1, int(sample_rate * MAX_TTS_REFERENCE_AUDIO_SECONDS))
+    audio_data = audio_data[:max_frames]
+    if audio_data.shape[1] > 1:
+        audio_data = audio_data.mean(axis=1)
+    else:
+        audio_data = audio_data[:, 0]
+    output = io.BytesIO()
+    sf.write(output, audio_data, sample_rate, format="WAV", subtype="PCM_16")
+    return output.getvalue()
 
 
 @app.get("/api/tts/{turn_id}/audio")

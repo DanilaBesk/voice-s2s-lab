@@ -423,6 +423,7 @@ describe("App", () => {
       ref_audio_path: ".local/sessions/tts/reference_voices/ref_voice_test/audio.wav",
       ref_text: "Текст референса",
       x_vector_only_mode: true,
+      max_new_tokens: 80,
     });
   });
 

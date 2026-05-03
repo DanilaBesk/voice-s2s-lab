@@ -71,6 +71,7 @@ def test_catalog_exposes_russian_tts_entries_with_voice_metadata() -> None:
     assert qwen3.tier == "around-2gb"
     assert qwen3.voices[0].id == "synthetic-reference"
     assert qwen3.output_sample_rate == 24000
+    assert qwen3.config["max_new_tokens"] == 80
 
 
 def test_catalog_enabled_tts_entries_are_runnable_and_installable() -> None:
@@ -339,6 +340,47 @@ async def test_rhvoice_adapter_generation_path_writes_wav_with_loaded_runtime(tm
     assert result.output_path == tmp_path / "speech.wav"
     assert result.output_path.read_bytes().startswith(b"RIFF")
     assert result.metrics["voice"] == "anna"
+
+
+def test_qwen3_adapter_caps_requested_generation_tokens(tmp_path: Path) -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("qwen3-tts-0-6b-base")
+    adapter = ADAPTER_REGISTRY["qwen3_tts"]()
+    adapter.config = entry
+    adapter.last_health.status = "ready"
+
+    captured: dict[str, int] = {}
+
+    class FakeModel:
+        def generate_voice_clone(self, **kwargs):
+            captured["max_new_tokens"] = kwargs["max_new_tokens"]
+            return [[0.0, 0.0, 0.0]], 24000
+
+    class FakeSoundFile:
+        def write(self, path: str, wav, sample_rate: int) -> None:
+            with wave.open(path, "wb") as handle:
+                handle.setnchannels(1)
+                handle.setsampwidth(2)
+                handle.setframerate(sample_rate)
+                handle.writeframes(b"\x00\x00" * len(wav))
+
+    adapter.model = FakeModel()
+    adapter.soundfile = FakeSoundFile()
+    result = adapter._generate_sync(
+        AudioTurn(
+            session_id="sess_tts",
+            turn_id="turn_tts",
+            input_path=tmp_path / "ignored.txt",
+            output_path=tmp_path / "speech.wav",
+            mime_type="text/plain",
+            persona_prompt="",
+            options={"text": "Привет", "voice": "synthetic-reference", "max_new_tokens": 512},
+        )
+    )
+
+    assert captured["max_new_tokens"] == 80
+    assert result.metrics["max_new_tokens"] == 80
+    assert result.output_path.read_bytes().startswith(b"RIFF")
 
 
 def test_vosk_adapter_normalizes_decomposed_cyrillic_before_synthesis(tmp_path: Path) -> None:

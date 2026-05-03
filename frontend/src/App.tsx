@@ -31,6 +31,7 @@ const DEFAULT_TURN_OPTIONS = {
 };
 
 const TALKER_TOKENS_PER_SECOND = 50;
+const QWEN_TTS_MAX_NEW_TOKENS = 80;
 
 type AppMode = "s2s" | "tts";
 type CallStatus = "idle" | "connecting" | "listening" | "capturing" | "processing" | "playing" | "ending" | "ended";
@@ -470,6 +471,7 @@ export function App() {
       ref_audio_path: reference.ref_audio_path,
       ref_text: qwenReferenceText.trim() || reference.ref_text,
       x_vector_only_mode: qwenXVectorOnly,
+      max_new_tokens: QWEN_TTS_MAX_NEW_TOKENS,
     };
   }
 
