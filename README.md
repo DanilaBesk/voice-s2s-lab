@@ -106,7 +106,7 @@ uv run --extra tts python ../scripts/install-tts-research-models.py --all
 uv run --extra tts python ../scripts/install-tts-research-models.py --all --verify
 ```
 
-The research manifest is [backend/app/tts-research-assets.yaml](backend/app/tts-research-assets.yaml). F5 Russian MLX 4-bit moved into the runnable catalog through the real `f5_mlx_tts` adapter; it requires Apple Silicon MLX and `uv sync --extra f5-mlx`. Qwen3-TTS 0.6B Base moved into the runnable catalog through the real `qwen3_tts` adapter after local load/unload/generate smoke passed with `qwen-tts==0.1.1` and `torchaudio==2.6.0`. The research manifest still keeps RHVoice Russian assets for future adapter work. RHVoice has disabled catalog metadata and a guarded adapter, but it is not exposed by `/api/models` because the native RHVoice engine library is not locally available. Qwen3-TTS 1.7B is intentionally excluded because it is too large for the current local test pass. Kokoro-82M is excluded because the downloaded voice set is not Russian. Silero CIS moved out of research and into the runnable TTS catalog through the real `silero_tts` adapter.
+The research manifest is [backend/app/tts-research-assets.yaml](backend/app/tts-research-assets.yaml). F5 Russian MLX 4-bit moved into the runnable catalog through the real `f5_mlx_tts` adapter; it requires Apple Silicon MLX and `uv sync --extra f5-mlx`. Qwen3-TTS 0.6B Base moved into the runnable catalog through the real `qwen3_tts` adapter after local load/unload/generate smoke passed with `qwen-tts==0.1.1` and `torchaudio==2.6.0`. RHVoice Russian Core and Voices moved into the runnable catalog through the guarded `rhvoice_tts` adapter after native runtime smoke passed. Qwen3-TTS 1.7B is intentionally excluded because it is too large for the current local test pass. Kokoro-82M is excluded because the downloaded voice set is not Russian. Silero CIS moved out of research and into the runnable TTS catalog through the real `silero_tts` adapter.
 
 ## Quick Start: Russian TTS
 
@@ -117,7 +117,15 @@ cd backend
 uv sync --extra dev --extra tts
 uv sync --extra f5-mlx
 uv run --extra tts python ../scripts/install-tts-models.py --all
+python ../scripts/install-rhvoice-runtime.py
 uv run --extra dev --extra tts --extra f5-mlx uvicorn app.main:app --host 127.0.0.1 --port 18000
+```
+
+For Docker/OrbStack on Apple Silicon, the backend container is Linux even though the host is macOS. Build RHVoice inside the container so it creates Linux `.so` files instead of host `.dylib` files:
+
+```bash
+docker compose up -d --build
+docker compose exec backend python /app/scripts/install-rhvoice-runtime.py --force
 ```
 
 In another terminal:

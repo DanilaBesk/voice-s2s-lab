@@ -413,6 +413,10 @@ models:
     config:
       data_path: data/models/rhvoice-runtime/data
       lib_path: data/models/rhvoice-runtime/lib/libRHVoice.dylib
+      platform_runtime_paths:
+        Linux:
+          data_path: data/models/rhvoice-runtime/linux-aarch64/data
+          lib_path: data/models/rhvoice-runtime/linux-aarch64/lib/libRHVoice.so
       required_files:
         - languages/Russian/language.info
         - voices/anna/voice.info

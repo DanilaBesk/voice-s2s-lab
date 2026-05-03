@@ -247,8 +247,8 @@ function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
 }
 
-function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean } = {}) {
-  let runtime = { model_id: null as string | null, status: "not_loaded", detail: null as string | null };
+function setupFetch(options: { loadFails?: boolean; ttsUnloaded?: boolean; initialRuntime?: { model_id: string | null; status: string; detail: string | null } } = {}) {
+  let runtime = options.initialRuntime ?? { model_id: null as string | null, status: "not_loaded", detail: null as string | null };
   const calls: FetchCall[] = [];
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -381,6 +381,60 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "TTS" }));
 
     expect(screen.getByRole("option", { name: /RHVoice Russian Core and Voices/ })).toBeVisible();
+  });
+
+  it("restores TTS mode from an already loaded RHVoice runtime instead of opening the microphone call flow", async () => {
+    const user = userEvent.setup();
+    const getUserMedia = vi.fn(async () => {
+      throw new DOMException("Requested device not found", "NotFoundError");
+    });
+    vi.stubGlobal("navigator", {
+      ...window.navigator,
+      mediaDevices: { getUserMedia },
+    });
+    const { calls } = setupFetch({
+      initialRuntime: { model_id: "rhvoice-russian-core-and-voices", status: "ready", detail: "RHVoice runtime is ready" },
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole("button", { name: "TTS" })).toHaveClass("mode-active");
+    expect(screen.getByLabelText("Выбрана модель")).toHaveTextContent("RHVoice Russian Core and Voices");
+    expect(screen.queryByRole("button", { name: /начать звонок/i })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/текст/i), "Привет");
+    await user.click(screen.getByRole("button", { name: /сгенерировать/i }));
+
+    expect(getUserMedia).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(calls).toContainEqual(expect.objectContaining({ method: "POST", url: `${API_BASE_URL}/api/tts` }));
+    });
+    expect(screen.queryByText("Микрофон не найден.")).not.toBeInTheDocument();
+  });
+
+  it("keeps a failed loaded RHVoice runtime on the TTS surface so the microphone flow is not shown", async () => {
+    const getUserMedia = vi.fn(async () => {
+      throw new DOMException("Requested device not found", "NotFoundError");
+    });
+    vi.stubGlobal("navigator", {
+      ...window.navigator,
+      mediaDevices: { getUserMedia },
+    });
+    setupFetch({
+      initialRuntime: {
+        model_id: "rhvoice-russian-core-and-voices",
+        status: "failed",
+        detail: "rhvoice-wrapper is not installed",
+      },
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole("button", { name: "TTS" })).toHaveClass("mode-active");
+    expect(screen.getByLabelText("Выбрана модель")).toHaveTextContent("RHVoice Russian Core and Voices");
+    expect(screen.getByText("rhvoice-wrapper is not installed")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /начать звонок/i })).not.toBeInTheDocument();
+    expect(getUserMedia).not.toHaveBeenCalled();
   });
 
   it("renders expanded catalog metadata and voice details without model-specific branches", async () => {

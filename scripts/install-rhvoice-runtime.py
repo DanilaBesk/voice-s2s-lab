@@ -22,7 +22,7 @@ SUBMODULES = (
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a local native RHVoice Russian runtime.")
-    parser.add_argument("--destination", default=str(DEFAULT_DESTINATION), help="Runtime output directory.")
+    parser.add_argument("--destination", default=str(default_destination()), help="Runtime output directory.")
     parser.add_argument("--force", action="store_true", help="Replace the destination if it already exists.")
     parser.add_argument("--jobs", type=int, default=max(1, os.cpu_count() or 1), help="SCons parallel jobs.")
     args = parser.parse_args()
@@ -58,11 +58,21 @@ def install_runtime(source: Path, destination: Path) -> None:
     (data_dir / "languages").mkdir(parents=True, exist_ok=True)
     (data_dir / "voices").mkdir(parents=True, exist_ok=True)
 
-    for name in ("libRHVoice.5.4.0.dylib", "libRHVoice_core.10.3.0.dylib", "libRHVoice_audio.2.0.0.dylib"):
-        shutil.copy2(source / "local" / "lib" / name, lib_dir / name)
-    symlink_force("libRHVoice.5.4.0.dylib", lib_dir / "libRHVoice.dylib")
-    symlink_force("libRHVoice_core.10.3.0.dylib", lib_dir / "libRHVoice_core.dylib")
-    symlink_force("libRHVoice_audio.2.0.0.dylib", lib_dir / "libRHVoice_audio.dylib")
+    if platform.system() == "Darwin":
+        for name in ("libRHVoice.5.4.0.dylib", "libRHVoice_core.10.3.0.dylib", "libRHVoice_audio.2.0.0.dylib"):
+            shutil.copy2(source / "local" / "lib" / name, lib_dir / name)
+        symlink_force("libRHVoice.5.4.0.dylib", lib_dir / "libRHVoice.dylib")
+        symlink_force("libRHVoice_core.10.3.0.dylib", lib_dir / "libRHVoice_core.dylib")
+        symlink_force("libRHVoice_audio.2.0.0.dylib", lib_dir / "libRHVoice_audio.dylib")
+    else:
+        for name in ("libRHVoice.so.5.4.0", "libRHVoice_core.so.10.3.0", "libRHVoice_audio.so.2.0.0"):
+            shutil.copy2(source / "local" / "lib" / name, lib_dir / name)
+        symlink_force("libRHVoice.so.5.4.0", lib_dir / "libRHVoice.so")
+        symlink_force("libRHVoice.so.5.4.0", lib_dir / "libRHVoice.so.5")
+        symlink_force("libRHVoice_core.so.10.3.0", lib_dir / "libRHVoice_core.so")
+        symlink_force("libRHVoice_core.so.10.3.0", lib_dir / "libRHVoice_core.so.10")
+        symlink_force("libRHVoice_audio.so.2.0.0", lib_dir / "libRHVoice_audio.so")
+        symlink_force("libRHVoice_audio.so.2.0.0", lib_dir / "libRHVoice_audio.so.2")
 
     shutil.copytree(source / "data" / "languages" / "Russian", data_dir / "languages" / "Russian")
     shutil.copytree(source / "data" / "voices" / "anna", data_dir / "voices" / "anna")
@@ -70,6 +80,12 @@ def install_runtime(source: Path, destination: Path) -> None:
 
     if platform.system() == "Darwin":
         fix_macos_install_names(lib_dir)
+
+
+def default_destination() -> Path:
+    if platform.system() == "Linux":
+        return DEFAULT_DESTINATION / f"linux-{platform.machine().lower()}"
+    return DEFAULT_DESTINATION
 
 
 def fix_macos_install_names(lib_dir: Path) -> None:

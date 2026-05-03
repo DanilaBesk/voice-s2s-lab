@@ -135,6 +135,8 @@ def test_rhvoice_catalog_entry_is_enabled_after_real_runtime_smoke_passes() -> N
     assert {voice.id: voice.gender for voice in rhvoice.voices} == {"anna": "female", "aleksandr": "male"}
     assert rhvoice.config["lib_path"] == "data/models/rhvoice-runtime/lib/libRHVoice.dylib"
     assert rhvoice.config["data_path"] == "data/models/rhvoice-runtime/data"
+    assert rhvoice.config["platform_runtime_paths"]["Linux"]["lib_path"] == "data/models/rhvoice-runtime/linux-aarch64/lib/libRHVoice.so"
+    assert rhvoice.config["platform_runtime_paths"]["Linux"]["data_path"] == "data/models/rhvoice-runtime/linux-aarch64/data"
     assert rhvoice.config["stream"] is False
 
 

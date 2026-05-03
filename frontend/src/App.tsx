@@ -75,6 +75,7 @@ export function App() {
   const sessionRef = useRef<SessionResponse | null>(null);
   const selectedModelRef = useRef<ModelEntry | undefined>(undefined);
   const runtimeRef = useRef<RuntimeResponse>(EMPTY_RUNTIME);
+  const restoredRuntimeModeRef = useRef(false);
   const vadRef = useRef(new UtteranceVad());
 
   const modeModels = useMemo(() => {
@@ -126,6 +127,7 @@ export function App() {
         setModels(loadedModels);
         setRuntime(nextRuntime);
         runtimeRef.current = nextRuntime;
+        restoreModeFromRuntime(loadedModels, nextRuntime);
         if (loadedModels.some((model) => model.status === "loading" || model.status === "not_checked") || nextRuntime.status === "loading") {
           timeoutId = window.setTimeout(loadSystem, 3000);
         }
@@ -149,6 +151,18 @@ export function App() {
     setModels(loadedModels);
     setRuntime(nextRuntime);
     runtimeRef.current = nextRuntime;
+  }
+
+  function restoreModeFromRuntime(loadedModels: ModelEntry[], nextRuntime: RuntimeResponse) {
+    if (restoredRuntimeModeRef.current || !nextRuntime.model_id) return;
+    const runtimeModel = loadedModels.find((model) => model.id === nextRuntime.model_id);
+    if (!runtimeModel) return;
+    const nextMode = modeForModel(runtimeModel);
+    if (!nextMode) return;
+    restoredRuntimeModeRef.current = true;
+    setAppMode(nextMode);
+    setSelectedModelId(runtimeModel.id);
+    setActivity(nextMode === "tts" ? "Введите текст для озвучки." : "Нажмите кнопку и говорите.");
   }
 
   function switchMode(nextMode: AppMode) {
@@ -664,6 +678,12 @@ function supportsS2s(model: ModelEntry): boolean {
 
 function supportsTts(model: ModelEntry): boolean {
   return model.type === "text_to_audio" || model.capabilities.includes("tts") || model.capabilities.includes("text_to_audio");
+}
+
+function modeForModel(model: ModelEntry): AppMode | null {
+  if (supportsTts(model)) return "tts";
+  if (supportsS2s(model)) return "s2s";
+  return null;
 }
 
 function runtimeDetailForModel(model: ModelEntry, runtime: RuntimeResponse): string | null {

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import ctypes
+import platform
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +23,8 @@ class RHVoiceTtsAdapter:
 
     async def prepare(self, config: ModelCatalogEntry) -> AdapterHealth:
         self.config = config
-        data_path = _resolve_path(str(config.config.get("data_path", "")))
+        runtime_config = _runtime_config_for_platform(config.config)
+        data_path = _resolve_path(str(runtime_config.get("data_path", "")))
         required_files = [data_path / name for name in config.config.get("required_files", [])] if data_path else []
         missing_files = [path for path in required_files if not path.exists()]
         if missing_files:
@@ -40,8 +43,11 @@ class RHVoiceTtsAdapter:
                 kwargs["stream"] = bool(config.config["stream"])
             if data_path is not None:
                 kwargs["data_path"] = str(data_path)
-            if config.config.get("lib_path"):
-                kwargs["lib_path"] = str(_resolve_path(str(config.config["lib_path"])))
+            if runtime_config.get("lib_path"):
+                lib_path = _resolve_path(str(runtime_config["lib_path"]))
+                if lib_path is not None:
+                    _preload_rhvoice_dependencies(lib_path)
+                    kwargs["lib_path"] = str(lib_path)
             self.tts = TTS(**kwargs)
         except Exception as exc:
             self.last_health = AdapterHealth(
@@ -118,3 +124,20 @@ def _resolve_path(value: str) -> Path | None:
     if path.is_absolute():
         return path
     return REPO_ROOT / path
+
+
+def _runtime_config_for_platform(config: dict[str, Any]) -> dict[str, Any]:
+    runtime_paths = config.get("platform_runtime_paths", {})
+    platform_config = runtime_paths.get(platform.system())
+    if isinstance(platform_config, dict):
+        return {**config, **platform_config}
+    return config
+
+
+def _preload_rhvoice_dependencies(lib_path: Path) -> None:
+    lib_dir = lib_path.parent
+    if platform.system() == "Linux":
+        for name in ("libRHVoice_core.so.10", "libRHVoice_audio.so.2"):
+            dependency = lib_dir / name
+            if dependency.exists():
+                ctypes.CDLL(str(dependency), mode=ctypes.RTLD_GLOBAL)

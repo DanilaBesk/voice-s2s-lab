@@ -15,6 +15,7 @@ services:
       - "18000:8000"
     volumes:
       - ./backend:/app/backend
+      - ./scripts:/app/scripts:ro
       - ./.local:/app/.local
       - ./data/models:/app/data/models
     working_dir: /app/backend
