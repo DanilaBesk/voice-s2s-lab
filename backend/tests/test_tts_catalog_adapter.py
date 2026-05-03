@@ -373,6 +373,66 @@ def test_vosk_adapter_normalizes_decomposed_cyrillic_before_synthesis(tmp_path: 
     assert "моделей" in captured["text"]
 
 
+def test_vosk_adapter_normalizes_latin_digits_and_symbols_before_synthesis(tmp_path: Path) -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("vosk-tts-ru-0-9-multi")
+    adapter = ADAPTER_REGISTRY["vosk_tts"]()
+    adapter.config = entry
+    adapter.last_health.status = "ready"
+
+    captured: dict[str, str] = {}
+
+    class FakeSynth:
+        def synth(self, text: str, oname: str, speaker_id: int = 0) -> None:
+            captured["text"] = text
+            Path(oname).write_bytes(b"RIFFfake")
+
+    adapter.synth = FakeSynth()
+    result = adapter._generate_sync(
+        AudioTurn(
+            session_id="sess_tts",
+            turn_id="turn_tts",
+            input_path=tmp_path / "ignored.txt",
+            output_path=tmp_path / "speech.wav",
+            mime_type="text/plain",
+            persona_prompt="",
+            options={"text": "Привет, Vosk TTS 123 и 5% email@test.com", "voice": "F01"},
+        )
+    )
+
+    assert result.text == "Привет, Vosk TTS 123 и 5% email@test.com"
+    assert captured["text"] == "Привет, воск ти ти эс один два три и пять процентов емаил собака тест.ком"
+
+
+def test_vosk_adapter_uses_config_snapshot_when_runtime_is_unloaded_during_synthesis(tmp_path: Path) -> None:
+    catalog = ModelCatalog(MODELS_DIR)
+    entry = catalog.get("vosk-tts-ru-0-9-multi")
+    adapter = ADAPTER_REGISTRY["vosk_tts"]()
+    adapter.config = entry
+    adapter.last_health.status = "ready"
+
+    class FakeSynth:
+        def synth(self, text: str, oname: str, speaker_id: int = 0) -> None:
+            adapter.config = None
+            Path(oname).write_bytes(b"RIFFfake")
+
+    adapter.synth = FakeSynth()
+    result = adapter._generate_sync(
+        AudioTurn(
+            session_id="sess_tts",
+            turn_id="turn_tts",
+            input_path=tmp_path / "ignored.txt",
+            output_path=tmp_path / "speech.wav",
+            mime_type="text/plain",
+            persona_prompt="",
+            options={"text": "Привет", "voice": "F01"},
+        )
+    )
+
+    assert result.output_path == tmp_path / "speech.wav"
+    assert result.metrics["output_sample_rate"] == 22050
+
+
 @pytest.mark.asyncio
 async def test_synthetic_tts_adapter_writes_wav_without_model_weights(tmp_path: Path) -> None:
     catalog = ModelCatalog(MODELS_DIR)
